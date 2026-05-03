@@ -1,1 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Capital Dash</title>
+<style>
+  :root {
+    --bg-deep: #0a0e27;
+    --bg-mid: #143158;
+    --panel: rgba(10, 14, 39, 0.92);
+    --accent: #4ee2ec;
+    --accent-2: #6ee7b7;
+    --gold: #ffd95b;
+    --good: #6ee7b7;
+    --warn: #ff5b6e;
+    --text: #f0f4ff;
+    --muted: rgba(240, 244, 255, 0.7);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; width: 100%;
+    background: radial-gradient(ellipse at top, var(--bg-mid) 0%, var(--bg-deep) 60%, #05080d 100%);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #wrap {
+    position: relative;
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+
+  /* Hub button */
+  .hub-link {
+    position: fixed; top: 14px; right: 14px; z-index: 11;
+    display: inline-block; padding: 8px 14px;
+    background: rgba(10,14,39,0.85); color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 8px;
+    font-size: 0.88em; font-weight: 700; letter-spacing: 1px;
+    text-decoration: none; cursor: pointer;
+    transition: transform 0.1s, background 0.15s, color 0.15s;
+  }
+  .hub-link:hover { background: var(--accent); color: #0a0e27; transform: scale(1.06); }
+
+  /* Stats bar (gameplay) */
+  .stats-bar {
+    position: fixed; top: 14px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 12px; z-index: 9;
+    background: rgba(10,14,39,0.7);
+    padding: 8px 16px; border-radius: 12px;
+    border: 1px solid rgba(78,226,236,0.4);
+    backdrop-filter: blur(6px);
+  }
+  .stat { text-align: center; min-width: 60px; }
+  .stat .label { font-size: 0.6em; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; }
+  .stat .value { font-size: 1.2em; color: var(--gold); font-weight: 800; line-height: 1.1; }
+  .stat .value.streak { color: var(--accent-2); }
+  .stat .value.lives { color: var(--warn); }
+
+  /* Panels */
+  #overlay {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none; z-index: 20;
+  }
+  .panel {
+    pointer-events: auto;
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: 28px 36px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(78, 226, 236, 0.4);
+    max-width: 92%;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  .panel h1 { font-size: 2.2em; color: var(--accent); margin-bottom: 8px; letter-spacing: 1px; }
+  .panel h2 { font-size: 1.4em; color: var(--gold); margin-bottom: 12px; }
+  .panel h3 { font-size: 1em; color: var(--gold); margin: 14px 0 6px; }
+  .panel p { margin: 6px 0; line-height: 1.5; opacity: 0.92; }
+  .btn {
+    display: inline-block; margin: 5px 4px;
+    padding: 10px 20px;
+    background: var(--accent); color: var(--bg-deep);
+    border: none; border-radius: 8px;
+    font-size: 1em; font-weight: 700;
+    cursor: pointer; transition: transform 0.1s, background 0.1s;
+    letter-spacing: 0.5px;
+  }
+  .btn:hover { transform: scale(1.06); background: var(--accent-2); color: var(--bg-deep); }
+  .btn.selected { background: var(--accent-2); }
+  .btn.go { padding: 12px 32px; font-size: 1.15em; margin-top: 14px; background: var(--gold); color: #4d2d00; }
+  .btn.go:hover { background: var(--accent-2); }
+  .small { font-size: 0.85em; opacity: 0.75; }
+  .hidden { display: none !important; }
+
+  /* Question card */
+  .question {
+    text-align: center;
+    max-width: 720px;
+    width: 100%;
+    padding: 0 10px;
+  }
+  .flag {
+    font-size: clamp(4em, 14vw, 7em);
+    line-height: 1;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 6px 18px rgba(0,0,0,0.4));
+  }
+  .country-name {
+    font-size: clamp(1.6em, 5vw, 2.4em);
+    color: var(--accent);
+    font-weight: 800;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+    text-shadow: 0 0 24px rgba(78,226,236,0.4);
+  }
+  .prompt {
+    font-size: 1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 24px;
+  }
+  .choices {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  .choice {
+    padding: 16px 18px;
+    background: rgba(78,226,236,0.10);
+    color: var(--text);
+    border: 2px solid rgba(78,226,236,0.45);
+    border-radius: 12px;
+    font-size: 1.1em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.15s, border-color 0.15s;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+  }
+  .choice:hover:not(:disabled) {
+    background: rgba(78,226,236,0.25);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .choice:disabled { cursor: default; }
+  .choice.correct {
+    background: rgba(110,231,183,0.45);
+    border-color: var(--good);
+    color: white;
+    box-shadow: 0 0 24px rgba(110,231,183,0.5);
+  }
+  .choice.wrong {
+    background: rgba(255,91,110,0.45);
+    border-color: var(--warn);
+    color: white;
+    animation: shake 0.4s;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    75% { transform: translateX(6px); }
+  }
+
+  .feedback-line {
+    margin-top: 22px;
+    font-size: 1.1em;
+    font-weight: 700;
+    min-height: 1.5em;
+  }
+  .feedback-line.right { color: var(--good); }
+  .feedback-line.wrong { color: var(--warn); }
+
+  .timer-bar {
+    width: 100%;
+    max-width: 520px;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    margin: 10px auto 18px;
+    overflow: hidden;
+  }
+  .timer-bar > .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--good));
+    transition: width 0.1s linear;
+    width: 100%;
+  }
+  .timer-bar > .fill.low { background: linear-gradient(90deg, var(--warn), var(--gold)); }
+
+  @media (max-width: 480px) {
+    .choices { grid-template-columns: 1fr; }
+    .panel { padding: 22px 22px; }
+    .panel h1 { font-size: 1.7em; }
+    .stats-bar { gap: 8px; padding: 6px 12px; }
+    .stat .value { font-size: 1em; }
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <!-- Question screen -->
+  <div class="question hidden" id="qScreen">
+    <div class="flag" id="flag">🌍</div>
+    <div class="country-name" id="countryName">—</div>
+    <div class="prompt">What is the capital?</div>
+    <div class="timer-bar"><div class="fill" id="tFill"></div></div>
+    <div class="choices" id="choices"></div>
+    <div class="feedback-line" id="feedback">&nbsp;</div>
+  </div>
+</div>
+
+<a href="../" class="hub-link" title="Back to Game Hub">◀ HUB</a>
+
+<div class="stats-bar hidden" id="statsBar">
+  <div class="stat"><div class="label">Score</div><div class="value" id="scoreV">0</div></div>
+  <div class="stat"><div class="label">Streak</div><div class="value streak" id="streakV">0</div></div>
+  <div class="stat"><div class="label">Lives</div><div class="value lives" id="livesV">❤❤❤</div></div>
+  <div class="stat"><div class="label">Best</div><div class="value" id="bestV">—</div></div>
+</div>
+
+<div id="overlay">
+  <!-- START PANEL -->
+  <div class="panel" id="startPanel">
+    <h1>🌍 CAPITAL DASH</h1>
+    <p>The country shows. Pick its capital before the timer runs out.</p>
+    <h3>DIFFICULTY</h3>
+    <div id="diffBtns">
+      <button class="btn selected" data-diff="europe">🇪🇺 EUROPE</button>
+      <button class="btn" data-diff="world">🌍 WORLD</button>
+      <button class="btn" data-diff="hard">🧠 EXPERT</button>
+    </div>
+    <p class="small" style="margin-top:14px;">3 lives · 8 seconds per question · streak bonus</p>
+    <br>
+    <button class="btn go" id="startBtn">▶ START</button>
+  </div>
+
+  <!-- GAME OVER PANEL -->
+  <div class="panel hidden" id="endPanel">
+    <h1 id="endTitle">GAME OVER</h1>
+    <div style="display:flex; justify-content:center; gap:22px; margin: 16px 0; flex-wrap:wrap;">
+      <div><div class="small">Score</div><div style="font-size:1.7em; color:var(--gold); font-weight:800;" id="endScore">0</div></div>
+      <div><div class="small">Best Streak</div><div style="font-size:1.7em; color:var(--accent-2); font-weight:800;" id="endStreak">0</div></div>
+      <div><div class="small">Correct</div><div style="font-size:1.7em; color:var(--accent); font-weight:800;" id="endCorrect">0</div></div>
+    </div>
+    <p id="endNote" class="small"></p>
+    <br>
+    <button class="btn go" id="playAgainBtn">▶ PLAY AGAIN</button>
+    <button class="btn" id="menuBtn">MENU</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- DATA ---------- */
+const COUNTRIES = {
+  europe: [
+    { c:'Italy', cap:'Rome', f:'🇮🇹' },
+    { c:'France', cap:'Paris', f:'🇫🇷' },
+    { c:'Germany', cap:'Berlin', f:'🇩🇪' },
+    { c:'Spain', cap:'Madrid', f:'🇪🇸' },
+    { c:'Portugal', cap:'Lisbon', f:'🇵🇹' },
+    { c:'United Kingdom', cap:'London', f:'🇬🇧' },
+    { c:'Ireland', cap:'Dublin', f:'🇮🇪' },
+    { c:'Netherlands', cap:'Amsterdam', f:'🇳🇱' },
+    { c:'Belgium', cap:'Brussels', f:'🇧🇪' },
+    { c:'Switzerland', cap:'Bern', f:'🇨🇭' },
+    { c:'Austria', cap:'Vienna', f:'🇦🇹' },
+    { c:'Denmark', cap:'Copenhagen', f:'🇩🇰' },
+    { c:'Sweden', cap:'Stockholm', f:'🇸🇪' },
+    { c:'Norway', cap:'Oslo', f:'🇳🇴' },
+    { c:'Finland', cap:'Helsinki', f:'🇫🇮' },
+    { c:'Poland', cap:'Warsaw', f:'🇵🇱' },
+    { c:'Czech Republic', cap:'Prague', f:'🇨🇿' },
+    { c:'Hungary', cap:'Budapest', f:'🇭🇺' },
+    { c:'Greece', cap:'Athens', f:'🇬🇷' },
+    { c:'Romania', cap:'Bucharest', f:'🇷🇴' },
+    { c:'Bulgaria', cap:'Sofia', f:'🇧🇬' },
+    { c:'Croatia', cap:'Zagreb', f:'🇭🇷' },
+    { c:'Serbia', cap:'Belgrade', f:'🇷🇸' },
+    { c:'Slovakia', cap:'Bratislava', f:'🇸🇰' },
+    { c:'Slovenia', cap:'Ljubljana', f:'🇸🇮' },
+    { c:'Iceland', cap:'Reykjavik', f:'🇮🇸' }
+  ],
+  world: [
+    { c:'United States', cap:'Washington, D.C.', f:'🇺🇸' },
+    { c:'Canada', cap:'Ottawa', f:'🇨🇦' },
+    { c:'Mexico', cap:'Mexico City', f:'🇲🇽' },
+    { c:'Brazil', cap:'Brasília', f:'🇧🇷' },
+    { c:'Argentina', cap:'Buenos Aires', f:'🇦🇷' },
+    { c:'Chile', cap:'Santiago', f:'🇨🇱' },
+    { c:'Peru', cap:'Lima', f:'🇵🇪' },
+    { c:'Colombia', cap:'Bogotá', f:'🇨🇴' },
+    { c:'Japan', cap:'Tokyo', f:'🇯🇵' },
+    { c:'China', cap:'Beijing', f:'🇨🇳' },
+    { c:'India', cap:'New Delhi', f:'🇮🇳' },
+    { c:'South Korea', cap:'Seoul', f:'🇰🇷' },
+    { c:'Thailand', cap:'Bangkok', f:'🇹🇭' },
+    { c:'Vietnam', cap:'Hanoi', f:'🇻🇳' },
+    { c:'Indonesia', cap:'Jakarta', f:'🇮🇩' },
+    { c:'Philippines', cap:'Manila', f:'🇵🇭' },
+    { c:'Australia', cap:'Canberra', f:'🇦🇺' },
+    { c:'New Zealand', cap:'Wellington', f:'🇳🇿' },
+    { c:'Egypt', cap:'Cairo', f:'🇪🇬' },
+    { c:'South Africa', cap:'Pretoria', f:'🇿🇦' },
+    { c:'Morocco', cap:'Rabat', f:'🇲🇦' },
+    { c:'Kenya', cap:'Nairobi', f:'🇰🇪' },
+    { c:'Nigeria', cap:'Abuja', f:'🇳🇬' },
+    { c:'Russia', cap:'Moscow', f:'🇷🇺' },
+    { c:'Turkey', cap:'Ankara', f:'🇹🇷' },
+    { c:'Saudi Arabia', cap:'Riyadh', f:'🇸🇦' },
+    { c:'Israel', cap:'Jerusalem', f:'🇮🇱' },
+    { c:'Iran', cap:'Tehran', f:'🇮🇷' }
+  ],
+  hard: [
+    { c:'Kazakhstan', cap:'Astana', f:'🇰🇿' },
+    { c:'Mongolia', cap:'Ulaanbaatar', f:'🇲🇳' },
+    { c:'Bhutan', cap:'Thimphu', f:'🇧🇹' },
+    { c:'Nepal', cap:'Kathmandu', f:'🇳🇵' },
+    { c:'Sri Lanka', cap:'Sri Jayawardenepura Kotte', f:'🇱🇰' },
+    { c:'Myanmar', cap:'Naypyidaw', f:'🇲🇲' },
+    { c:'Laos', cap:'Vientiane', f:'🇱🇦' },
+    { c:'Cambodia', cap:'Phnom Penh', f:'🇰🇭' },
+    { c:'Bangladesh', cap:'Dhaka', f:'🇧🇩' },
+    { c:'Pakistan', cap:'Islamabad', f:'🇵🇰' },
+    { c:'Uzbekistan', cap:'Tashkent', f:'🇺🇿' },
+    { c:'Azerbaijan', cap:'Baku', f:'🇦🇿' },
+    { c:'Georgia', cap:'Tbilisi', f:'🇬🇪' },
+    { c:'Armenia', cap:'Yerevan', f:'🇦🇲' },
+    { c:'Albania', cap:'Tirana', f:'🇦🇱' },
+    { c:'Moldova', cap:'Chișinău', f:'🇲🇩' },
+    { c:'Estonia', cap:'Tallinn', f:'🇪🇪' },
+    { c:'Latvia', cap:'Riga', f:'🇱🇻' },
+    { c:'Lithuania', cap:'Vilnius', f:'🇱🇹' },
+    { c:'Belarus', cap:'Minsk', f:'🇧🇾' },
+    { c:'Ukraine', cap:'Kyiv', f:'🇺🇦' },
+    { c:'Ethiopia', cap:'Addis Ababa', f:'🇪🇹' },
+    { c:'Ghana', cap:'Accra', f:'🇬🇭' },
+    { c:'Senegal', cap:'Dakar', f:'🇸🇳' },
+    { c:'Tanzania', cap:'Dodoma', f:'🇹🇿' },
+    { c:'Uruguay', cap:'Montevideo', f:'🇺🇾' },
+    { c:'Paraguay', cap:'Asunción', f:'🇵🇾' },
+    { c:'Bolivia', cap:'La Paz / Sucre', f:'🇧🇴' },
+    { c:'Ecuador', cap:'Quito', f:'🇪🇨' },
+    { c:'Venezuela', cap:'Caracas', f:'🇻🇪' },
+    { c:'Cuba', cap:'Havana', f:'🇨🇺' },
+    { c:'Dominican Republic', cap:'Santo Domingo', f:'🇩🇴' },
+    { c:'Iceland', cap:'Reykjavik', f:'🇮🇸' },
+    { c:'Malta', cap:'Valletta', f:'🇲🇹' },
+    { c:'Cyprus', cap:'Nicosia', f:'🇨🇾' }
+  ]
+};
+
+const QUESTION_TIME = 8000; // ms
+const $ = (id) => document.getElementById(id);
+
+const state = {
+  diff: 'europe',
+  pool: [],          // remaining unused this round
+  current: null,
+  score: 0,
+  streak: 0,
+  bestStreak: 0,
+  lives: 3,
+  correctCount: 0,
+  totalAsked: 0,
+  qStart: 0,
+  qTimerId: null,
+  locked: false
+};
+
+/* ---------- bindings ---------- */
+document.querySelectorAll('#diffBtns .btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#diffBtns .btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    state.diff = b.dataset.diff;
+  });
+});
+$('startBtn').addEventListener('click', startGame);
+$('playAgainBtn').addEventListener('click', () => { hide('endPanel'); startGame(); });
+$('menuBtn').addEventListener('click', goMenu);
+
+/* ---------- helpers ---------- */
+function show(id){ $(id).classList.remove('hidden'); }
+function hide(id){ $(id).classList.add('hidden'); }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+function bestKey(){ return `capital_best_${state.diff}`; }
+function getBest(){
+  try { const v = localStorage.getItem(bestKey()); return v ? JSON.parse(v) : null; } catch(e){ return null; }
+}
+function setBest(b){ try { localStorage.setItem(bestKey(), JSON.stringify(b)); } catch(e){} }
+
+/* ---------- start ---------- */
+function startGame(){
+  state.score = 0;
+  state.streak = 0;
+  state.bestStreak = 0;
+  state.lives = 3;
+  state.correctCount = 0;
+  state.totalAsked = 0;
+  state.locked = false;
+  state.pool = shuffle(COUNTRIES[state.diff].slice());
+
+  $('scoreV').textContent = '0';
+  $('streakV').textContent = '0';
+  $('livesV').textContent = '❤❤❤';
+  const best = getBest();
+  $('bestV').textContent = best ? best.score : '—';
+
+  hide('startPanel');
+  hide('endPanel');
+  show('statsBar');
+  show('qScreen');
+
+  nextQuestion();
+}
+
+function nextQuestion(){
+  if (state.lives <= 0) { return endGame(); }
+  if (state.pool.length === 0){
+    // refill from full pool, avoiding immediate repeats by re-shuffling
+    state.pool = shuffle(COUNTRIES[state.diff].slice());
+  }
+  state.current = state.pool.pop();
+  state.totalAsked += 1;
+  state.locked = false;
+
+  $('flag').textContent = state.current.f;
+  $('countryName').textContent = state.current.c.toUpperCase();
+  $('feedback').textContent = ' ';
+  $('feedback').className = 'feedback-line';
+
+  // build choices: 1 correct + 3 distractors from same difficulty
+  const all = COUNTRIES[state.diff];
+  const distractors = shuffle(all.filter(x => x.cap !== state.current.cap)).slice(0, 3).map(x => x.cap);
+  const options = shuffle([state.current.cap, ...distractors]);
+
+  const cdiv = $('choices');
+  cdiv.innerHTML = '';
+  options.forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'choice';
+    b.textContent = opt;
+    b.addEventListener('click', () => onAnswer(b, opt));
+    cdiv.appendChild(b);
+  });
+
+  // start timer
+  state.qStart = Date.now();
+  if (state.qTimerId) clearInterval(state.qTimerId);
+  state.qTimerId = setInterval(updateTimer, 80);
+  $('tFill').classList.remove('low');
+  $('tFill').style.width = '100%';
+}
+
+function updateTimer(){
+  const elapsed = Date.now() - state.qStart;
+  const remaining = Math.max(0, QUESTION_TIME - elapsed);
+  const pct = (remaining / QUESTION_TIME) * 100;
+  $('tFill').style.width = pct + '%';
+  if (pct < 30) $('tFill').classList.add('low');
+  if (remaining <= 0){
+    timeUp();
+  }
+}
+
+function onAnswer(btn, choice){
+  if (state.locked) return;
+  state.locked = true;
+  clearInterval(state.qTimerId);
+
+  const correct = choice === state.current.cap;
+  // disable all
+  document.querySelectorAll('.choice').forEach(b => b.disabled = true);
+
+  if (correct){
+    btn.classList.add('correct');
+    const elapsedMs = Date.now() - state.qStart;
+    const speedBonus = Math.max(0, Math.floor((QUESTION_TIME - elapsedMs) / 80));
+    const streakBonus = state.streak * 10;
+    const points = 100 + speedBonus + streakBonus;
+    state.score += points;
+    state.streak += 1;
+    state.correctCount += 1;
+    if (state.streak > state.bestStreak) state.bestStreak = state.streak;
+    $('scoreV').textContent = state.score;
+    $('streakV').textContent = state.streak;
+    const note = state.streak >= 3 ? `🔥 +${points} (streak ×${state.streak})` : `+${points}`;
+    setFeedback(note, true);
+  } else {
+    btn.classList.add('wrong');
+    // also highlight the right answer
+    document.querySelectorAll('.choice').forEach(b => {
+      if (b.textContent === state.current.cap) b.classList.add('correct');
+    });
+    state.streak = 0;
+    state.lives -= 1;
+    $('streakV').textContent = '0';
+    $('livesV').textContent = '❤'.repeat(Math.max(0,state.lives)) + '🖤'.repeat(3 - Math.max(0,state.lives));
+    setFeedback(`Capital is ${state.current.cap}`, false);
+  }
+
+  setTimeout(nextQuestion, correct ? 800 : 1700);
+}
+
+function timeUp(){
+  if (state.locked) return;
+  state.locked = true;
+  clearInterval(state.qTimerId);
+  document.querySelectorAll('.choice').forEach(b => {
+    b.disabled = true;
+    if (b.textContent === state.current.cap) b.classList.add('correct');
+  });
+  state.streak = 0;
+  state.lives -= 1;
+  $('streakV').textContent = '0';
+  $('livesV').textContent = '❤'.repeat(Math.max(0,state.lives)) + '🖤'.repeat(3 - Math.max(0,state.lives));
+  setFeedback(`Time! Capital is ${state.current.cap}`, false);
+  setTimeout(nextQuestion, 1700);
+}
+
+function setFeedback(msg, ok){
+  const el = $('feedback');
+  el.textContent = msg;
+  el.className = 'feedback-line ' + (ok ? 'right' : 'wrong');
+}
+
+function endGame(){
+  clearInterval(state.qTimerId);
+  $('endTitle').textContent = state.score > 0 ? '🏁 ROUND OVER' : 'GAME OVER';
+  $('endScore').textContent = state.score;
+  $('endStreak').textContent = state.bestStreak;
+  $('endCorrect').textContent = `${state.correctCount}/${state.totalAsked - (state.lives < 0 ? 0 : 0)}`;
+
+  const prev = getBest();
+  let note = '';
+  if (!prev || state.score > prev.score){
+    setBest({ score: state.score, streak: state.bestStreak });
+    note = '⭐ NEW BEST! ⭐';
+  } else {
+    note = `Best so far: ${prev.score}`;
+  }
+  $('endNote').textContent = note;
+
+  hide('qScreen');
+  hide('statsBar');
+  show('endPanel');
+}
+
+function goMenu(){
+  hide('endPanel');
+  hide('qScreen');
+  hide('statsBar');
+  show('startPanel');
+}
+</script>
+</body>
+</html>
 
