@@ -48,6 +48,17 @@
     background: rgba(10,30,45,0.85); color: var(--gold); border: 1px solid var(--gold);
   }
   .btn.home:hover { background: var(--gold); color: #0e2a3a; }
+  .hub-link {
+    position: fixed; top: 14px; right: 14px; z-index: 11;
+    display: inline-block; padding: 8px 14px;
+    background: rgba(10,30,45,0.85); color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 8px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 0.88em; font-weight: 700; letter-spacing: 1px;
+    text-decoration: none; cursor: pointer;
+    transition: transform 0.1s, background 0.15s, color 0.15s;
+  }
+  .hub-link:hover { background: var(--accent); color: #0e2a3a; transform: scale(1.06); }
   .controls-hint { font-size: 0.78em; opacity: 0.75; margin-top: 10px; }
   .quiz-modal {
     pointer-events: auto;
@@ -89,6 +100,7 @@
 <div id="wrap">
   <canvas id="game" width="900" height="600"></canvas>
   <button class="btn home hidden" id="homeBtn">🏠 MENU</button>
+  <a href="../" class="hub-link" title="Back to Game Hub">◀ HUB</a>
   <div id="overlay">
     <div class="panel" id="startPanel">
       <h1>🌍 ECOBLOCKS</h1>
