@@ -97,6 +97,14 @@
   .btn.selected { background: var(--accent-2); }
   .btn.go { padding: 12px 32px; font-size: 1.15em; margin-top: 14px; background: var(--gold); color: #4d2d00; }
   .btn.go:hover { background: var(--accent-2); }
+  .btn.home {
+    position: fixed; top: 14px; left: 14px; z-index: 11;
+    margin: 0; padding: 8px 14px;
+    background: rgba(10,14,39,0.85); color: var(--gold);
+    border: 1px solid var(--gold); border-radius: 8px;
+    font-size: 0.88em; font-weight: 700; letter-spacing: 1px;
+  }
+  .btn.home:hover { background: var(--gold); color: #0a0e27; transform: scale(1.06); }
   .small { font-size: 0.85em; opacity: 0.75; }
   .hidden { display: none !important; }
 
@@ -220,6 +228,7 @@
   </div>
 </div>
 
+<button class="btn home hidden" id="homeBtn">🏠 MENU</button>
 <a href="../" class="hub-link" title="Back to Game Hub">◀ HUB</a>
 
 <div class="stats-bar hidden" id="statsBar">
@@ -391,6 +400,7 @@ document.querySelectorAll('#diffBtns .btn').forEach(b => {
 $('startBtn').addEventListener('click', startGame);
 $('playAgainBtn').addEventListener('click', () => { hide('endPanel'); startGame(); });
 $('menuBtn').addEventListener('click', goMenu);
+$('homeBtn').addEventListener('click', goMenu);
 
 /* ---------- helpers ---------- */
 function show(id){ $(id).classList.remove('hidden'); }
@@ -423,6 +433,7 @@ function startGame(){
   hide('endPanel');
   show('statsBar');
   show('qScreen');
+  show('homeBtn');
 
   nextQuestion();
 }
@@ -556,16 +567,18 @@ function endGame(){
 
   hide('qScreen');
   hide('statsBar');
+  hide('homeBtn');
   show('endPanel');
 }
 
 function goMenu(){
+  if (state.qTimerId) clearInterval(state.qTimerId);
   hide('endPanel');
   hide('qScreen');
   hide('statsBar');
+  hide('homeBtn');
   show('startPanel');
 }
 </script>
 </body>
 </html>
-
