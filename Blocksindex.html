@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EcoBlocks</title>
+<style>
+  :root {
+    --panel: rgba(10, 30, 45, 0.92);
+    --accent: #6ee7b7;
+    --gold: #ffd95b;
+    --warn: #ff7a5b;
+    --text: #f0fff7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; width: 100%;
+    background: #0e2a3a;
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+  }
+  #wrap { display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; }
+  canvas { background: rgba(10,30,45,0.55); border-radius: 12px; box-shadow: 0 0 40px rgba(110,231,183,0.3); max-width: 100%; max-height: 100%; }
+  #overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .panel {
+    pointer-events: auto;
+    background: var(--panel); border: 2px solid var(--accent);
+    border-radius: 16px; padding: 24px 32px; text-align: center;
+    box-shadow: 0 0 60px rgba(110,231,183,0.4);
+    max-width: 92%; max-height: 92vh; overflow-y: auto;
+  }
+  .panel h1 { font-size: 2em; color: var(--accent); margin-bottom: 8px; }
+  .panel h2 { font-size: 1.5em; color: var(--gold); margin-bottom: 12px; }
+  .panel h3 { font-size: 1em; color: var(--gold); margin: 10px 0 6px; }
+  .panel p { margin: 6px 0; line-height: 1.4; }
+  .panel .small { font-size: 0.82em; opacity: 0.75; }
+  .btn {
+    display: inline-block; margin: 5px 4px; padding: 8px 16px;
+    background: var(--accent); color: #0e2a3a;
+    border: none; border-radius: 8px;
+    font-size: 0.95em; font-weight: 700; cursor: pointer; transition: transform 0.1s;
+  }
+  .btn:hover { transform: scale(1.06); background: var(--gold); }
+  .btn.selected { background: var(--gold); }
+  .btn.home {
+    position: fixed; top: 14px; left: 14px; z-index: 10;
+    background: rgba(10,30,45,0.85); color: var(--gold); border: 1px solid var(--gold);
+  }
+  .btn.home:hover { background: var(--gold); color: #0e2a3a; }
+  .controls-hint { font-size: 0.78em; opacity: 0.75; margin-top: 10px; }
+  .quiz-modal {
+    pointer-events: auto;
+    background: rgba(10,30,45,0.97);
+    border: 3px solid var(--gold);
+    border-radius: 18px;
+    padding: 26px 32px;
+    text-align: center;
+    box-shadow: 0 14px 50px rgba(0,0,0,0.55);
+    max-width: 520px; max-height: 90vh; overflow-y: auto;
+  }
+  .quiz-modal .qe { font-size: 3.2em; line-height: 1; margin: 6px 0 8px; }
+  .quiz-modal h2.qq { font-size: 1.25em; color: var(--accent); margin: 6px 0 12px; line-height: 1.4; }
+  .quiz-modal .qchoice {
+    display: block; width: 100%;
+    margin: 6px 0; padding: 10px 14px;
+    background: rgba(110,231,183,0.12);
+    color: #fff8ed;
+    border: 1.5px solid rgba(110,231,183,0.5);
+    border-radius: 10px;
+    font-size: 1em; font-weight: 600;
+    text-align: left; cursor: pointer; transition: transform 0.06s, background 0.1s;
+  }
+  .quiz-modal .qchoice:hover { background: rgba(110,231,183,0.28); transform: translateX(3px); }
+  .quiz-modal .qchoice .num { color: var(--gold); font-weight: 800; margin-right: 8px; }
+  .quiz-modal .qchoice.right { background: rgba(110,231,183,0.45); border-color: var(--accent); }
+  .quiz-modal .qchoice.wrong { background: rgba(255,91,110,0.45); border-color: var(--warn); }
+  .quiz-modal .qfeedback {
+    font-size: 1.4em; font-weight: 800; margin: 10px 0 4px;
+  }
+  .quiz-modal .qfeedback.right { color: var(--accent); }
+  .quiz-modal .qfeedback.wrong { color: var(--warn); }
+  .quiz-modal .qhead { font-size: 1.15em; color: var(--gold); font-weight: 800; margin: 8px 0 6px; }
+  .quiz-modal .qbody { font-size: 1em; line-height: 1.5; opacity: 0.9; margin: 6px 0 12px; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="900" height="600"></canvas>
+  <button class="btn home hidden" id="homeBtn">🏠 MENU</button>
+  <div id="overlay">
+    <div class="panel" id="startPanel">
+      <h1>🌍 ECOBLOCKS</h1>
+      <p>Stack blocks. Clear rows. Discover the wonders of nature.</p>
+      <h3>CHOOSE A SUBJECT</h3>
+      <div id="themeButtons">
+        <button class="btn selected" data-theme="animals">🐾 Animals</button>
+        <button class="btn" data-theme="plants">🌿 Plants</button>
+        <button class="btn" data-theme="space">🪐 Space</button>
+        <button class="btn" data-theme="body">🧠 Human Body</button>
+        <button class="btn" data-theme="mixed">🌍 Mixed</button>
+      </div>
+      <h3>DIFFICULTY</h3>
+      <div id="diffButtons">
+        <button class="btn" data-diff="easy">EASY</button>
+        <button class="btn selected" data-diff="medium">MEDIUM</button>
+        <button class="btn" data-diff="hard">HARD</button>
+      </div>
+      <p style="margin-top:10px;"><button class="btn" id="startBtn">▶ START</button></p>
+      <p class="controls-hint">
+        ← → move · ↓ soft drop · ↑/X rotate · Z rotate other way · Space hard drop · P pause · Esc menu
+      </p>
+      <p class="small" id="bestScore"></p>
+    </div>
+
+    <div class="panel hidden" id="pausePanel">
+      <h2>⏸ PAUSED</h2>
+      <p>Press <strong>P</strong> to resume</p>
+      <button class="btn" id="pauseHome">🏠 Back to menu</button>
+    </div>
+
+
+    <!-- Quiz / Fact modal -->
+    <div class="quiz-modal hidden" id="quizPanel">
+      <!-- Quiz phase -->
+      <div id="quizPhase">
+        <p class="small" style="opacity:0.6;">QUICK QUIZ!</p>
+        <div class="qe" id="quizEmoji">🐙</div>
+        <h2 class="qq" id="quizQuestion">Question?</h2>
+        <div id="quizChoices"></div>
+        <p class="small" style="margin-top:8px;opacity:0.6;">Tip: press 1, 2, or 3 on the keyboard</p>
+      </div>
+      <!-- Fact reveal phase -->
+      <div id="factPhase" class="hidden">
+        <div class="qe" id="factEmoji">🐙</div>
+        <p class="qfeedback right" id="quizFeedback">✅ Correct!</p>
+        <h3 class="qhead" id="factHead">Headline</h3>
+        <p class="qbody" id="factBody">Body</p>
+        <button class="btn" id="factContinue">▶ CONTINUE</button>
+      </div>
+    </div>
+
+    <div class="panel hidden" id="losePanel">
+      <h2>🌱 GAME OVER</h2>
+      <p>Score: <strong id="loseScore">0</strong></p>
+      <p>Lines: <strong id="loseLines">0</strong></p>
+      <p>Facts learned: <strong id="loseFacts">0</strong></p>
+      <button class="btn" id="loseRestart">↺ PLAY AGAIN</button>
+      <button class="btn" id="loseBackHome">🏠 MENU</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ============================================================
+// ECOBLOCKS — Tetris-like with science / nature facts.
+// Themes choose the SUBJECT of the facts that drop in.
+// ============================================================
+
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+const W = cvs.width, H = cvs.height;
+
+const COLS = 10, ROWS = 20;
+const CELL = 28;
+const BOARD_X = 30, BOARD_Y = 30;
+const BOARD_W = COLS * CELL, BOARD_H = ROWS * CELL;
+
+const STATE = { START: 0, PLAYING: 1, PAUSED: 2, LOSE: 3, QUIZ: 4, FACTBOX: 5 };
+let state = STATE.START;
+let difficulty = 'medium';
+let theme = 'animals';
+
+// Visual palette per theme. Subject of facts is also driven by `theme`.
+const THEMES = {
+  animals: { top:'#103e29', mid:'#2e7a4f', bot:'#a3e07a', label:'ANIMALS' },
+  plants:  { top:'#1c3a0f', mid:'#558822', bot:'#dee8a3', label:'PLANTS' },
+  space:   { top:'#05060f', mid:'#1b1450', bot:'#7a3eea', label:'SPACE' },
+  body:    { top:'#3a0d28', mid:'#aa3865', bot:'#ffd1d9', label:'HUMAN BODY' },
+  mixed:   { top:'#0e2a3a', mid:'#1c5e7c', bot:'#ffba6b', label:'MIXED' },
+};
+
+// Tetromino shapes
+const SHAPES = {
+  I: { color: '#6ee7b7', cells: [
+    [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+    [[0,0,1,0],[0,0,1,0],[0,0,1,0],[0,0,1,0]],
+    [[0,0,0,0],[0,0,0,0],[1,1,1,1],[0,0,0,0]],
+    [[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]],
+  ]},
+  O: { color: '#ffd95b', cells: [
+    [[0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+    [[0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+    [[0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+    [[0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+  ]},
+  T: { color: '#b46cff', cells: [
+    [[0,0,0,0],[1,1,1,0],[0,1,0,0],[0,0,0,0]],
+    [[0,1,0,0],[1,1,0,0],[0,1,0,0],[0,0,0,0]],
+    [[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],
+    [[0,1,0,0],[0,1,1,0],[0,1,0,0],[0,0,0,0]],
+  ]},
+  S: { color: '#7be37b', cells: [
+    [[0,1,1,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]],
+    [[1,0,0,0],[1,1,0,0],[0,1,0,0],[0,0,0,0]],
+    [[0,1,1,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]],
+    [[1,0,0,0],[1,1,0,0],[0,1,0,0],[0,0,0,0]],
+  ]},
+  Z: { color: '#ff7a5b', cells: [
+    [[1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+    [[0,1,0,0],[1,1,0,0],[1,0,0,0],[0,0,0,0]],
+    [[1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+    [[0,1,0,0],[1,1,0,0],[1,0,0,0],[0,0,0,0]],
+  ]},
+  J: { color: '#5ec1ff', cells: [
+    [[1,0,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],
+    [[1,1,0,0],[1,0,0,0],[1,0,0,0],[0,0,0,0]],
+    [[0,0,0,0],[1,1,1,0],[0,0,1,0],[0,0,0,0]],
+    [[0,1,0,0],[0,1,0,0],[1,1,0,0],[0,0,0,0]],
+  ]},
+  L: { color: '#ff9b3d', cells: [
+    [[0,0,1,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],
+    [[1,0,0,0],[1,0,0,0],[1,1,0,0],[0,0,0,0]],
+    [[0,0,0,0],[1,1,1,0],[1,0,0,0],[0,0,0,0]],
+    [[1,1,0,0],[0,1,0,0],[0,1,0,0],[0,0,0,0]],
+  ]},
+};
+const SHAPE_KEYS = Object.keys(SHAPES);
+
+// =============================================================
+// -------- Multiple-choice quizzes, keyed by emoji --------
+// Each: { q: question, a: [3 choices], c: correct index 0..2 }
+const QUIZZES = {
+  '🐙': { q:'How many hearts does an octopus have?', a:['One','Three','Seven'], c:1 },
+  '🐢': { q:'How long can a sea turtle hold its breath?', a:['Five minutes','One hour','Up to 7 hours'], c:2 },
+  '🦒': { q:'How long is a giraffe’s tongue?', a:['About 5 cm','About 50 cm','Two whole metres'], c:1 },
+  '🐧': { q:'How deep can emperor penguins dive?', a:['About 50 m','About 200 m','More than 500 m'], c:2 },
+  '🦘': { q:'Kangaroos can do many things — but they CANNOT…', a:['Jump','Walk backwards','Swim'], c:1 },
+  '🐝': { q:'What does a honey bee’s waggle dance do?', a:['Show off','Scare predators','Tell other bees where flowers are'], c:2 },
+  '🦋': { q:'Where do butterflies taste?', a:['With their wings','With their feet','With their antennae'], c:1 },
+  '🐬': { q:'How do dolphins call each other?', a:['By smell','With unique whistle "names"','By tapping the water'], c:1 },
+  '🐘': { q:'Which animal cannot jump at all?', a:['Frog','Dog','Elephant'], c:2 },
+  '🐼': { q:'How long do pandas spend eating each day?', a:['Less than 30 min','About 4 hours','About 12 hours'], c:2 },
+  '🦅': { q:'How far can an eagle spot a small animal?', a:['A few metres','100 metres','Up to 3 kilometres'], c:2 },
+  '🐊': { q:'For how long have crocodiles looked the same?', a:['About 1,000 years','About 1 million years','About 200 million years'], c:2 },
+  '🦔': { q:'About how many spines does a hedgehog have?', a:['About 50','About 500','About 5,000'], c:2 },
+  '🦑': { q:'How fast can a squid change colour?', a:['A whole minute','A few seconds','Less than a blink'], c:2 },
+  '🌳': { q:'What is the name of the largest tree on Earth?', a:['King Henry','General Sherman','Mister Big'], c:1 },
+  '🌵': { q:'How long can a saguaro cactus live?', a:['A few years','About 50 years','More than 200 years'], c:2 },
+  '🍄': { q:'The largest organism on Earth is…', a:['A blue whale','An old elephant','A giant fungus'], c:2 },
+  '🌻': { q:'What do young sunflowers do during the day?', a:['Stay perfectly still','Close up','Turn to follow the sun'], c:2 },
+  '🌱': { q:'How fast can bamboo grow in one day?', a:['A few millimetres','About 10 cm','Almost a whole metre'], c:2 },
+  '🌲': { q:'How do trees in a forest "communicate"?', a:['By making sounds','Through underground fungus','They don’t'], c:1 },
+  '🍁': { q:'Why do maple leaves turn red in autumn?', a:['They are sick','It just gets cold','The tree is pulling its sugars back inside'], c:2 },
+  '🌹': { q:'How long have roses existed on Earth?', a:['A few centuries','About 1 million years','About 35 million years'], c:2 },
+  '🌽': { q:'How many rows of kernels does an ear of corn have?', a:['Always odd','Always even','Random'], c:1 },
+  '🌴': { q:'Why can coconuts travel between islands?', a:['They have wings','Their fibre shell traps air, so they float','Birds always carry them'], c:1 },
+  '🪐': { q:'What are Saturn’s rings made of?', a:['Solid metal','Pure dust','Billions of icy chunks'], c:2 },
+  '🌑': { q:'On the Moon you would weigh…', a:['The same as on Earth','About six times less','Twice as much'], c:1 },
+  '☀️': { q:'About how many Earths could fit inside the Sun?', a:['A few hundred','About a thousand','More than a million'], c:2 },
+  '🌍': { q:'What is unusual about Earth’s name?', a:['It’s the ONLY planet not named after a god','It is named after a god','It has no real name'], c:0 },
+  '⭐': { q:'Most stars you can see are…', a:['Smaller than the Sun','The same size as the Sun','Bigger than the Sun'], c:2 },
+  '☄️': { q:'Where does a comet’s tail point?', a:['Behind the comet','Toward the Sun','Always AWAY from the Sun'], c:2 },
+  '🌌': { q:'About how many stars are in the Milky Way?', a:['A few thousand','About 1 million','Over 100 billion'], c:2 },
+  '🚀': { q:'How long does sunlight take to reach Earth?', a:['Instantly','About 8 minutes','About an hour'], c:1 },
+  '🛸': { q:'How many moons does Jupiter have?', a:['Just one','About a dozen','More than 90'], c:2 },
+  '🌠': { q:'A teaspoon of neutron-star matter weighs about…', a:['A feather','A bag of rice','A whole mountain'], c:2 },
+  '🧠': { q:'About how much energy does your brain use?', a:['Like a fridge','Like a small lightbulb','Like a TV'], c:1 },
+  '❤️': { q:'About how many times a day does your heart beat?', a:['100','10,000','100,000'], c:2 },
+  '🦴': { q:'Babies have how many bones compared to adults?', a:['Fewer','The same','About 100 more'], c:2 },
+  '👁️': { q:'About how many colours can the human eye see?', a:['A few hundred','About 10,000','About 10 million'], c:2 },
+  '👅': { q:'What is special about your tongue?', a:['It is the longest muscle','It is the strongest for its size','It is a single muscle'], c:1 },
+  '🩸': { q:'About how far does your blood travel inside you each day?', a:['100 metres','One kilometre','About 19,000 km'], c:2 },
+  '😴': { q:'When are you slightly TALLER?', a:['After sport','In the morning','After dinner'], c:1 },
+  '👃': { q:'About how many smells can the human nose tell apart?', a:['About 100','About 10,000','About 1 trillion'], c:2 },
+  '🧬': { q:'About how many new cells does your body make every second?', a:['Just a few','A few hundred','About 25 million'], c:2 },
+  '🤧': { q:'About how fast does a sneeze travel?', a:['Slow walking pace','Cycling speed','Faster than 100 km/h'], c:2 },
+};
+function quizFor(fact) {
+  const q = QUIZZES[fact.e];
+  if (q) return q;
+  return { q: 'Which is true about this?', a: [fact.h, 'I don’t know', 'Something else'], c: 0 };
+}
+
+// FACT LIBRARY
+// Each fact has a category, a headline (short hook for the card),
+// and a body (2–3 sentences engineered to make the kid pause and think).
+// =============================================================
+const FACTS = [
+  // ----- Animals -----
+  { c:'animals', e:'🐙', h:'Octopuses have THREE hearts',
+    b:'Two hearts pump blood to the gills, and one big heart pumps it to the rest of the body. Strangely, the big heart **stops beating** when the octopus swims — that\'s why octopuses prefer crawling.' },
+  { c:'animals', e:'🐢', h:'Sea turtles can hold their breath for HOURS',
+    b:'When they sleep underwater, their heart rate drops to about one beat every nine minutes. With that little oxygen, an adult sea turtle can stay submerged up to 7 hours without coming up to breathe.' },
+  { c:'animals', e:'🦒', h:'A giraffe\'s tongue is almost half a metre long',
+    b:'It\'s about 50 cm long and dark blue-purple. The dark colour acts like sunscreen — giraffes spend so many hours each day eating leaves with their tongue exposed that pale skin would burn.' },
+  { c:'animals', e:'🐧', h:'Emperor penguins dive deeper than skyscrapers are tall',
+    b:'They can dive past 500 metres — deeper than most submarines used in scientific research. To survive the cold and pressure, their heart slows down to about 6 beats per minute.' },
+  { c:'animals', e:'🦘', h:'Kangaroos cannot walk backwards',
+    b:'Their giant feet and thick tail act like a tripod that only works going forward. That\'s why a kangaroo and an emu appear on Australia\'s coat of arms — neither animal can step backwards, symbolising progress.' },
+  { c:'animals', e:'🐝', h:'Bees do a "waggle dance" to give directions',
+    b:'When a bee finds flowers, she dances in a figure-of-eight back at the hive. The angle of the dance tells the others where the sun should be when they fly toward the flowers. It\'s a real map made of dance moves.' },
+  { c:'animals', e:'🦋', h:'Butterflies taste with their FEET',
+    b:'They have tiny taste sensors on the bottom of each foot. When a butterfly lands on a leaf, it can immediately tell whether the leaf is the right kind of plant for laying eggs — without ever using its mouth.' },
+  { c:'animals', e:'🐬', h:'Dolphins call each other by name',
+    b:'Each dolphin invents its own unique whistle as a baby and uses it for the rest of its life. Other dolphins copy that whistle to "call" the dolphin — exactly like saying its name across the sea.' },
+  { c:'animals', e:'🐘', h:'Elephants are the only animals that can\'t jump',
+    b:'Their legs aren\'t built like springs the way most mammals\' are — instead they\'re like sturdy pillars holding up several tonnes. So elephants always keep at least one foot on the ground.' },
+  { c:'animals', e:'🐼', h:'Pandas eat for 12 hours every day',
+    b:'Bamboo gives almost no energy, so pandas have to eat between 12 and 38 kilograms of it a day. That\'s why you almost never see a panda doing anything except chewing — they literally don\'t have time to.' },
+  { c:'animals', e:'🦅', h:'Eagles can spot a rabbit 3 km away',
+    b:'Eagle vision is about eight times sharper than ours. From the height of a tall building, an eagle could read the headlines of a newspaper lying on the ground — and then dive at over 240 km/h to catch dinner.' },
+  { c:'animals', e:'🐊', h:'Crocodiles haven\'t changed in 200 million years',
+    b:'They watched the dinosaurs come and go and barely changed shape. Their secret: a body plan that already worked perfectly. When something is already a champion at hunting in water, evolution leaves it alone.' },
+  { c:'animals', e:'🦔', h:'A hedgehog has about 5,000 spines',
+    b:'Each spine is a special hardened hair, and a single spine lasts about a year before falling out and being replaced. When a hedgehog rolls into a ball, every one of those 5,000 hairs points outward.' },
+  { c:'animals', e:'🦑', h:'Squid can change colour in milliseconds',
+    b:'Their skin contains tiny stretchy bags of pigment that they squeeze open and shut. They can flash a message, hide against the seabed, or even pretend to be a different animal — all faster than you can blink.' },
+
+  // ----- Plants -----
+  { c:'plants', e:'🌳', h:'The biggest tree on Earth is named "General Sherman"',
+    b:'It\'s a giant sequoia in California, about 84 metres tall and 11 metres wide at the base. Its trunk weighs more than 1,000 cars and it has been alive for over 2,000 years — older than most cities.' },
+  { c:'plants', e:'🌵', h:'Some cacti live longer than 200 years',
+    b:'A saguaro cactus may not even grow its first arm until it\'s 75 years old. By the time it has five arms, it has lived through more history than your great-great-grandparents combined.' },
+  { c:'plants', e:'🍄', h:'The largest organism on Earth is a fungus',
+    b:'In Oregon there is a single honey fungus that covers nearly 9 km² underground. It spreads invisibly through the forest, and scientists believe it\'s thousands of years old. The mushrooms we see are just its "fingers".' },
+  { c:'plants', e:'🌻', h:'Young sunflowers follow the sun',
+    b:'Each morning their stem twists east, and during the day they slowly turn west, tracking the sun. At night they swing back to face east, ready for sunrise. They stop doing this when they grow up.' },
+  { c:'plants', e:'🌱', h:'Bamboo can grow almost a metre in a single day',
+    b:'Some bamboo species shoot up nearly 1 metre in 24 hours — fast enough that you can almost see it move. The stalk gets all its height in just one season; after that, it only thickens, never grows taller.' },
+  { c:'plants', e:'🌲', h:'Trees "talk" to each other through fungus',
+    b:'Underneath a forest, the roots of trees are connected by a vast network of fine fungal threads. Trees use this "wood-wide web" to send sugar to weaker trees and warning signals when insects attack.' },
+  { c:'plants', e:'🍁', h:'Maples turn red because they\'re hiding their food',
+    b:'In autumn, the green colour (chlorophyll) breaks down and the tree pulls its remaining sugars back into the trunk. The reds and oranges left over act like sunscreen to protect the tree while it does this.' },
+  { c:'plants', e:'🌹', h:'Roses have been around for 35 million years',
+    b:'Fossils show that roses already existed long before humans. The roses you see in shops are descendants of wild roses that were carefully bred over thousands of years to have more petals and stronger smells.' },
+  { c:'plants', e:'🌽', h:'A single ear of corn always has an EVEN number of rows',
+    b:'Look closely — every cob has 8, 12, 14 or 16 rows, never an odd number. It\'s because of the way corn cells split when the cob is forming, always two at a time.' },
+  { c:'plants', e:'🌴', h:'Coconuts can sail across the ocean',
+    b:'A coconut\'s thick fibre shell traps air, so it floats. Some have travelled thousands of kilometres on ocean currents, washed up on a new beach, and grown into a palm tree there. That\'s how coconut palms colonise islands.' },
+
+  // ----- Space -----
+  { c:'space', e:'🪐', h:'Saturn\'s rings are made of countless ice chunks',
+    b:'They look solid, but the rings are actually billions of pieces of ice and rock — some smaller than a grain of sand, others as big as a school bus. The rings are wider than the distance from Earth to the Moon.' },
+  { c:'space', e:'🌑', h:'You would weigh six times less on the Moon',
+    b:'Gravity on the Moon is about 1/6 of Earth\'s. A 30 kg child would weigh only about 5 kg there. That\'s why the Apollo astronauts seemed to bounce around — every step was almost a jump.' },
+  { c:'space', e:'☀️', h:'A million Earths could fit inside the Sun',
+    b:'The Sun is so big that you could line up 109 Earths across its diameter, and it would take 1.3 million Earths to fill its volume. And yet the Sun is only an average-sized star.' },
+  { c:'space', e:'🌍', h:'Earth is the only planet not named after a god',
+    b:'Mercury, Venus, Mars and the others all got their names from Roman gods. The name "Earth" simply comes from old words for "ground" or "soil". So our planet is the one called "the dirt".' },
+  { c:'space', e:'⭐', h:'Most stars you see are bigger than the Sun',
+    b:'The faintest stars don\'t reach Earth at all — the ones we can see by eye are the brightest, which usually means they\'re larger or hotter than the Sun. The night sky is showing you mostly giants.' },
+  { c:'space', e:'☄️', h:'A comet\'s tail always points AWAY from the Sun',
+    b:'The Sun blasts out a stream of particles called the solar wind, and that pushes the comet\'s gas and dust outward. So even when a comet is flying away from the Sun, its tail still streams out behind it on the Sun-side.' },
+  { c:'space', e:'🌌', h:'The Milky Way has more than 100 billion stars',
+    b:'If you tried to count them at a rate of one per second, you\'d still be counting more than 3,000 years from now. And the Milky Way is just one of around 2 trillion galaxies in the visible universe.' },
+  { c:'space', e:'🚀', h:'Sunlight takes 8 minutes to reach Earth',
+    b:'Light is incredibly fast — 300,000 km per second — but the Sun is so far away that the sunlight you feel right now actually left the Sun about 8 minutes ago. We always see the Sun as it was in the past.' },
+  { c:'space', e:'🛸', h:'Jupiter has at least 95 known moons',
+    b:'Most are small lumps of rock captured by Jupiter\'s huge gravity. Four of them — Io, Europa, Ganymede, Callisto — were spotted by Galileo with one of the very first telescopes, in 1610.' },
+  { c:'space', e:'🌠', h:'A spoonful of neutron-star matter weighs a billion tonnes',
+    b:'Neutron stars are what\'s left when a giant star dies. Their material is squeezed so tight that a teaspoonful would weigh as much as a mountain on Earth. Yet a neutron star is only about as wide as a small city.' },
+
+  // ----- Human body -----
+  { c:'body', e:'🧠', h:'Your brain runs on the power of a small lightbulb',
+    b:'It uses around 20 watts of energy — about 20% of everything you eat. While you\'re reading this sentence, your brain is firing roughly 86 billion neurons, in patterns you never have to think about consciously.' },
+  { c:'body', e:'❤️', h:'Your heart beats around 100,000 times every day',
+    b:'In an 80-year life, that adds up to roughly 3 billion heartbeats. The amount of blood it pumps in one day could fill 200 large bottles, and the same blood gets reused — it never wears out, just keeps circling.' },
+  { c:'body', e:'🦴', h:'Babies have 100 more bones than adults',
+    b:'Newborns have around 300 bones to make them flexible enough to be born. As we grow, many of those bones fuse together. By the time you\'re an adult, you have 206. Some bones in your skull only finished joining last year, if you\'re a kid.' },
+  { c:'body', e:'👁️', h:'Your eyes can see 10 million different colours',
+    b:'But not all at once — your brain compares colours next to each other to figure out shades. That\'s why a colour can look totally different depending on what\'s around it. Your eye is more like a very clever guesser than a camera.' },
+  { c:'body', e:'👅', h:'Your tongue is the strongest muscle for its size',
+    b:'It\'s actually made of eight muscles working together. Strong enough to push food around all day without ever getting tired, and sensitive enough to feel a single grain of sugar.' },
+  { c:'body', e:'🩸', h:'Your blood travels 19,000 km every day',
+    b:'That\'s further than the distance from London to Sydney. The blood loops through your body roughly once a minute, picking up oxygen, dropping off waste, and visiting every cell along the way.' },
+  { c:'body', e:'😴', h:'You\'re a bit taller in the morning',
+    b:'During the day, gravity squeezes the soft discs between your spine\'s bones. At night when you lie down, the discs swell back up. So you\'re about 1 cm taller when you wake up than when you go to bed.' },
+  { c:'body', e:'👃', h:'Your nose can recognise about 1 trillion smells',
+    b:'For a long time scientists thought it was only 10,000. New research shows our smell is far more powerful — humans aren\'t the smelling-champions of the animal world, but we\'re much better at it than people used to believe.' },
+  { c:'body', e:'🧬', h:'Your body makes 25 million new cells every SECOND',
+    b:'That\'s about as many cells as the population of a big country, every single second of your life. Almost all of your skin gets replaced about every month, so technically you have a brand-new outside every few weeks.' },
+  { c:'body', e:'🤧', h:'A sneeze can travel faster than a car on the motorway',
+    b:'Sneezes burst out at over 100 km/h. They\'re your body\'s way of shooting out anything that irritates your nose, and they happen so fast that you can\'t actually keep your eyes open during one.' },
+];
+
+// Filtered to whichever theme is selected
+function poolForTheme() {
+  if (theme === 'mixed') return FACTS.slice();
+  return FACTS.filter(f => f.c === theme);
+}
+
+// "No-repeat" bag for facts
+let factBag = [];
+function nextFact() {
+  if (factBag.length === 0) {
+    factBag = poolForTheme();
+    if (factBag.length === 0) factBag = FACTS.slice(); // safety
+    for (let i = factBag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [factBag[i], factBag[j]] = [factBag[j], factBag[i]];
+    }
+  }
+  return factBag.pop();
+}
+
+// ---------------- Difficulty ----------------
+const DIFF = {
+  easy:   { fall: 800, speedupEvery: 15, speedupAmount: 50, name:'EASY' },
+  medium: { fall: 600, speedupEvery: 10, speedupAmount: 60, name:'MEDIUM' },
+  hard:   { fall: 400, speedupEvery: 6,  speedupAmount: 60, name:'HARD' },
+};
+
+// ---------------- Game state ----------------
+const game = {
+  board: null,
+  current: null,
+  next: null,
+  fallTimer: 0,
+  fallInterval: 600,
+  score: 0,
+  lines: 0,
+  factsLearned: 0,
+  factShown: null,
+  factHistory: [],
+  factQueue: [],
+  currentQuiz: null,
+  quizCorrect: 0,
+  quizWrong: 0,
+};
+
+function emptyBoard() {
+  const b = [];
+  for (let r = 0; r < ROWS; r++) b.push(new Array(COLS).fill(null));
+  return b;
+}
+function newPiece() {
+  const k = SHAPE_KEYS[Math.floor(Math.random() * SHAPE_KEYS.length)];
+  return { type: k, rot: 0, color: SHAPES[k].color, x: 3, y: -1 };
+}
+function pieceCells(p) { return SHAPES[p.type].cells[p.rot]; }
+function collide(p, dx, dy, drot) {
+  const cells = SHAPES[p.type].cells[(p.rot + (drot||0) + 4) % 4];
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+    if (!cells[r][c]) continue;
+    const nx = p.x + c + dx, ny = p.y + r + dy;
+    if (nx < 0 || nx >= COLS || ny >= ROWS) return true;
+    if (ny >= 0 && game.board[ny][nx]) return true;
+  }
+  return false;
+}
+function lockPiece() {
+  const cells = pieceCells(game.current);
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+    if (cells[r][c]) {
+      const x = game.current.x + c, y = game.current.y + r;
+      if (y < 0) { lose(); return; }
+      game.board[y][x] = { color: game.current.color };
+    }
+  }
+  // clear lines
+  let cleared = 0;
+  for (let r = ROWS - 1; r >= 0; r--) {
+    if (game.board[r].every(c => c)) {
+      game.board.splice(r, 1);
+      game.board.unshift(new Array(COLS).fill(null));
+      cleared++; r++;
+    }
+  }
+  if (cleared > 0) {
+    const linePts = [0, 100, 300, 500, 800];
+    game.score += linePts[cleared];
+    game.lines += cleared;
+    const factCount = cleared <= 2 ? 1 : (cleared === 3 ? 2 : 3);
+    for (let i = 0; i < factCount; i++) {
+      const f = nextFact();
+      game.factsLearned += 1;
+      game.factHistory.unshift(f);
+      if (game.factHistory.length > 3) game.factHistory.pop();
+      game.factQueue.push(f);
+    }
+    if (game.factQueue.length > 0 && state === STATE.PLAYING) showNextQuiz();
+    const cfg = DIFF[difficulty];
+    const tier = Math.floor(game.lines / cfg.speedupEvery);
+    game.fallInterval = Math.max(80, cfg.fall - tier * cfg.speedupAmount);
+  }
+  game.current = game.next;
+  game.next = newPiece();
+  if (collide(game.current, 0, 0, 0)) lose();
+}
+function lose() {
+  state = STATE.LOSE;
+  document.getElementById('loseScore').textContent = game.score;
+  document.getElementById('loseLines').textContent = game.lines;
+  document.getElementById('loseFacts').textContent = game.factsLearned;
+  show('losePanel');
+  saveBest();
+}
+function hardDrop() {
+  let dist = 0;
+  while (!collide(game.current, 0, 1, 0)) { game.current.y += 1; dist += 1; }
+  game.score += dist * 2;
+  lockPiece();
+}
+function softDrop() {
+  if (!collide(game.current, 0, 1, 0)) { game.current.y += 1; game.score += 1; }
+  else lockPiece();
+}
+function rotate(dir) {
+  const offsets = [0, -1, 1, -2, 2];
+  for (const dx of offsets) {
+    if (!collide(game.current, dx, 0, dir)) {
+      game.current.rot = (game.current.rot + dir + 4) % 4;
+      game.current.x += dx;
+      return;
+    }
+  }
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'p' || e.key === 'P') {
+    if (state === STATE.PLAYING) { state = STATE.PAUSED; show('pausePanel'); }
+    else if (state === STATE.PAUSED) { state = STATE.PLAYING; hide('pausePanel'); }
+    e.preventDefault(); return;
+  }
+  if (e.key === 'Escape') {
+    if (state === STATE.PLAYING || state === STATE.PAUSED) backToHome();
+    e.preventDefault(); return;
+  }
+  if (state === STATE.QUIZ) {
+    if (e.key === '1' || e.key === '2' || e.key === '3') {
+      const idx = parseInt(e.key, 10) - 1;
+      const btns = document.querySelectorAll('#quizChoices .qchoice');
+      if (btns[idx] && !btns[idx].disabled) answerQuiz(idx);
+      e.preventDefault();
+    }
+    return;
+  }
+  if (state === STATE.FACTBOX) {
+    if (e.key === 'Enter' || e.key === ' ') { dismissFact(); e.preventDefault(); }
+    return;
+  }
+  if (state !== STATE.PLAYING) return;
+  switch (e.key) {
+    case 'ArrowLeft':  if (!collide(game.current, -1, 0, 0)) game.current.x -= 1; e.preventDefault(); break;
+    case 'ArrowRight': if (!collide(game.current, 1, 0, 0))  game.current.x += 1; e.preventDefault(); break;
+    case 'ArrowDown':  softDrop(); e.preventDefault(); break;
+    case 'ArrowUp':
+    case 'x': case 'X': rotate(1); e.preventDefault(); break;
+    case 'z': case 'Z': rotate(-1); e.preventDefault(); break;
+    case ' ': hardDrop(); e.preventDefault(); break;
+  }
+});
+
+let lastTime = performance.now();
+function update(now) {
+  const dt = now - lastTime;
+  lastTime = now;
+  if (state !== STATE.PLAYING) return;
+  game.fallTimer += dt;
+  if (game.fallTimer >= game.fallInterval) {
+    game.fallTimer = 0;
+    if (!collide(game.current, 0, 1, 0)) game.current.y += 1;
+    else lockPiece();
+  }
+  if (game.factShown) game.factShown.ttl -= 1;
+}
+
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  const tp = THEMES[theme] || THEMES.mixed;
+  const grd = ctx.createLinearGradient(0, 0, 0, H);
+  grd.addColorStop(0, tp.top); grd.addColorStop(0.6, tp.mid); grd.addColorStop(1, tp.bot);
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W, H);
+  if (state === STATE.START || !game.board) return;
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(BOARD_X - 4, BOARD_Y - 4, BOARD_W + 8, BOARD_H + 8);
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  for (let r = 0; r <= ROWS; r++) { ctx.beginPath(); ctx.moveTo(BOARD_X, BOARD_Y + r*CELL); ctx.lineTo(BOARD_X + BOARD_W, BOARD_Y + r*CELL); ctx.stroke(); }
+  for (let c = 0; c <= COLS; c++) { ctx.beginPath(); ctx.moveTo(BOARD_X + c*CELL, BOARD_Y); ctx.lineTo(BOARD_X + c*CELL, BOARD_Y + BOARD_H); ctx.stroke(); }
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const cell = game.board[r][c];
+    if (cell) drawCell(BOARD_X + c*CELL, BOARD_Y + r*CELL, cell.color);
+  }
+  if (game.current) {
+    let gy = 0; while (!collide(game.current, 0, gy + 1, 0)) gy++;
+    const cells = pieceCells(game.current);
+    ctx.save(); ctx.globalAlpha = 0.25;
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+      if (cells[r][c]) drawCell(BOARD_X + (game.current.x + c)*CELL, BOARD_Y + (game.current.y + gy + r)*CELL, game.current.color);
+    }
+    ctx.restore();
+  }
+  if (game.current) {
+    const cells = pieceCells(game.current);
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+      if (cells[r][c]) {
+        const px = BOARD_X + (game.current.x + c)*CELL;
+        const py = BOARD_Y + (game.current.y + r)*CELL;
+        if (py >= BOARD_Y) drawCell(px, py, game.current.color);
+      }
+    }
+  }
+  const panelX = BOARD_X + BOARD_W + 24;
+  const panelW = W - panelX - 24;
+  drawCard(panelX, 30, panelW, 130, 'STATS');
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 18px Segoe UI, sans-serif';
+  ctx.fillText('Score: ' + game.score, panelX + 16, 80);
+  ctx.fillStyle = '#6ee7b7'; ctx.fillText('Lines: ' + game.lines, panelX + 16, 108);
+  ctx.fillStyle = '#ffd95b'; ctx.fillText('Facts: ' + game.factsLearned, panelX + 16, 136);
+  ctx.fillStyle = '#b46cff'; ctx.font = 'bold 13px Segoe UI, sans-serif';
+  ctx.fillText(DIFF[difficulty].name + ' - ' + tp.label, panelX + 16, 156);
+  drawCard(panelX, 180, panelW, 130, 'NEXT');
+  if (game.next) {
+    const cells = SHAPES[game.next.type].cells[0];
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+      if (cells[r][c]) drawCell(panelX + 50 + c*CELL, 220 + r*CELL, game.next.color);
+    }
+  }
+  drawCard(panelX, 330, panelW, 250, 'FACT OF THE LINE');
+  if (game.factShown) {
+    const f = game.factShown.fact;
+    ctx.font = '34px sans-serif';
+    ctx.fillText(f.e, panelX + 16, 380);
+    ctx.fillStyle = '#ffd95b';
+    ctx.font = 'bold 13px Segoe UI, sans-serif';
+    wrapText(ctx, f.h, panelX + 60, 365, panelW - 76, 16, 2);
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px Segoe UI, sans-serif';
+    wrapText(ctx, stripFormatting(f.b), panelX + 16, 410, panelW - 32, 16, 9);
+  } else {
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = 'italic 13px Segoe UI, sans-serif';
+    ctx.fillText('Clear a row to discover something amazing!', panelX + 16, 380);
+  }
+}
+function stripFormatting(t) { return t.replace(/\*\*/g, ''); }
+function drawCard(x, y, w, h, title) {
+  ctx.fillStyle = 'rgba(10,30,45,0.7)';
+  ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 2;
+  ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = '#6ee7b7'; ctx.font = 'bold 12px Segoe UI, sans-serif';
+  ctx.fillText(title, x + 12, y + 22);
+}
+function wrapText(ctx, text, x, y, maxW, lineH, maxLines) {
+  const words = text.split(' ');
+  let line = '';
+  let lines = 0;
+  maxLines = maxLines || 5;
+  for (let n = 0; n < words.length; n++) {
+    const test = line + words[n] + ' ';
+    if (ctx.measureText(test).width > maxW && line.length > 0) {
+      ctx.fillText(line, x, y + lines * lineH);
+      line = words[n] + ' ';
+      lines++;
+      if (lines >= maxLines) { ctx.fillText(line + '...', x, y + lines * lineH); return; }
+    } else { line = test; }
+  }
+  ctx.fillText(line, x, y + lines * lineH);
+}
+function drawCell(x, y, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.fillRect(x + 1, y + 1, CELL - 2, 4);
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillRect(x + 1, y + CELL - 5, CELL - 2, 4);
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+}
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+document.querySelectorAll('#diffButtons .btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#diffButtons .btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    difficulty = b.dataset.diff;
+  });
+});
+document.querySelectorAll('#themeButtons .btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#themeButtons .btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    theme = b.dataset.theme;
+    factBag = [];
+  });
+});
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('loseRestart').addEventListener('click', startGame);
+document.getElementById('loseBackHome').addEventListener('click', backToHome);
+document.getElementById('pauseHome').addEventListener('click', backToHome);
+document.getElementById('homeBtn').addEventListener('click', backToHome);
+document.getElementById('factContinue').addEventListener('click', dismissFact);
+function startGame() {
+  hide('startPanel');
+  hide('losePanel');
+  hide('pausePanel');
+  hide('quizPanel');
+  document.getElementById('homeBtn').classList.remove('hidden');
+  game.board = emptyBoard();
+  game.current = newPiece();
+  game.next = newPiece();
+  game.score = 0;
+  game.lines = 0;
+  game.factsLearned = 0;
+  game.factShown = null;
+  game.factHistory = [];
+  game.factQueue = [];
+  game.currentQuiz = null;
+  game.quizCorrect = 0;
+  game.quizWrong = 0;
+  factBag = [];
+  game.fallInterval = DIFF[difficulty].fall;
+  game.fallTimer = 0;
+  state = STATE.PLAYING;
+}
+function backToHome() {
+  hide('losePanel');
+  hide('pausePanel');
+  hide('quizPanel');
+  document.getElementById('homeBtn').classList.add('hidden');
+  refreshBestText();
+  show('startPanel');
+  state = STATE.START;
+}
+function saveBest() {
+  try {
+    const key = 'ecoblocks.best.' + difficulty + '.' + theme;
+    const cur = parseInt(localStorage.getItem(key) || '0', 10);
+    if (game.score > cur) localStorage.setItem(key, String(game.score));
+  } catch(e) {}
+  refreshBestText();
+}
+function refreshBestText() {
+  try {
+    const e = document.getElementById('bestScore');
+    const easy = localStorage.getItem('ecoblocks.best.easy.' + theme) || '0';
+    const med = localStorage.getItem('ecoblocks.best.medium.' + theme) || '0';
+    const hard = localStorage.getItem('ecoblocks.best.hard.' + theme) || '0';
+    e.textContent = 'Best (' + (THEMES[theme]?THEMES[theme].label:theme) + ') - Easy: ' + easy + ' Medium: ' + med + ' Hard: ' + hard;
+  } catch(e) {}
+}
+refreshBestText();
+
+// =============== Quiz / fact popup ===============
+function showNextQuiz() {
+  const f = game.factQueue[0];
+  if (!f) return;
+  const Q = quizFor(f);
+  // Shuffle the choices but remember which was correct
+  const order = [0,1,2];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  game.currentQuiz = { fact: f, q: Q, order };
+  state = STATE.QUIZ;
+  document.getElementById('quizEmoji').textContent = f.e;
+  document.getElementById('quizQuestion').textContent = Q.q;
+  const cont = document.getElementById('quizChoices');
+  cont.innerHTML = '';
+  order.forEach((origIdx, displayIdx) => {
+    const btn = document.createElement('button');
+    btn.className = 'qchoice';
+    btn.dataset.orig = String(origIdx);
+    btn.dataset.display = String(displayIdx);
+    btn.innerHTML = '<span class="num">' + (displayIdx + 1) + '.</span> ' + Q.a[origIdx];
+    btn.addEventListener('click', () => answerQuiz(displayIdx));
+    cont.appendChild(btn);
+  });
+  document.getElementById('quizPhase').classList.remove('hidden');
+  document.getElementById('factPhase').classList.add('hidden');
+  show('quizPanel');
+}
+function answerQuiz(displayIdx) {
+  if (!game.currentQuiz) return;
+  const { fact: f, q: Q, order } = game.currentQuiz;
+  const origIdx = order[displayIdx];
+  const correct = origIdx === Q.c;
+  // Mark buttons
+  const btns = document.querySelectorAll('#quizChoices .qchoice');
+  btns.forEach(b => {
+    const oi = parseInt(b.dataset.orig, 10);
+    if (oi === Q.c) b.classList.add('right');
+    else if (parseInt(b.dataset.display, 10) === displayIdx) b.classList.add('wrong');
+    b.disabled = true;
+  });
+  if (correct) game.quizCorrect += 1; else game.quizWrong += 1;
+  // Reveal fact phase shortly after
+  setTimeout(() => {
+    document.getElementById('factEmoji').textContent = f.e;
+    const fb = document.getElementById('quizFeedback');
+    if (correct) { fb.textContent = '✅ CORRECT!'; fb.className = 'qfeedback right'; }
+    else         { fb.textContent = '❌ Not quite — here’s the answer'; fb.className = 'qfeedback wrong'; }
+    document.getElementById('factHead').textContent = f.h;
+    document.getElementById('factBody').textContent = stripFormatting(f.b);
+    document.getElementById('quizPhase').classList.add('hidden');
+    document.getElementById('factPhase').classList.remove('hidden');
+    state = STATE.FACTBOX;
+  }, 700);
+}
+function dismissFact() {
+  hide('quizPanel');
+  game.factQueue.shift();
+  game.currentQuiz = null;
+  if (game.factQueue.length > 0) {
+    showNextQuiz();
+  } else {
+    state = STATE.PLAYING;
+  }
+}
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  try { update(now || performance.now()); } catch(e) { console.error('update', e); }
+  try { render(); } catch(e) { console.error('render', e); }
+}
+requestAnimationFrame((t) => { lastTime = t; loop(t); });
+</script>
+</body>
+</html>
