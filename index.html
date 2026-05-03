@@ -12,6 +12,8 @@
     --accent: #4ee2ec;
     --accent-eco: #6ee7b7;
     --accent-math: #b46cff;
+    --accent-match: #ff8ad6;
+    --accent-world: #ffb347;
     --gold: #ffd95b;
     --text: #f0f4ff;
     --muted: rgba(240, 244, 255, 0.7);
@@ -121,6 +123,10 @@
   .card.math { border-color: var(--accent-math); box-shadow: 0 0 40px rgba(180, 108, 255, 0.3); }
   .card.parole { color: var(--accent); }
   .card.parole { border-color: var(--accent); box-shadow: 0 0 40px rgba(78, 226, 236, 0.3); }
+  .card.match { color: var(--accent-match); }
+  .card.match { border-color: var(--accent-match); box-shadow: 0 0 40px rgba(255, 138, 214, 0.3); }
+  .card.world { color: var(--accent-world); }
+  .card.world { border-color: var(--accent-world); box-shadow: 0 0 40px rgba(255, 179, 71, 0.3); }
 
   .icon {
     font-size: 4em;
@@ -205,6 +211,22 @@
       <h2>Parole Volanti</h2>
       <div class="lang">Word game · IT</div>
       <p>Acchiappa le parole giuste prima che volino via! Un gioco di vocabolario veloce e divertente in italiano.</p>
+      <span class="play">PLAY ▶</span>
+    </a>
+
+    <a class="card match" href="match/">
+      <div class="icon">🎴</div>
+      <h2>Match Madness</h2>
+      <div class="lang">Memory · EN</div>
+      <p>Flip the cards, find every matching pair. Pick a theme — animals, fruits, space, or faces — and beat your best score.</p>
+      <span class="play">PLAY ▶</span>
+    </a>
+
+    <a class="card world" href="world/">
+      <div class="icon">🌍</div>
+      <h2>Capital Dash</h2>
+      <div class="lang">Geography · EN</div>
+      <p>The country shows, the clock ticks. Pick its capital before time runs out. Europe, world, or expert mode.</p>
       <span class="play">PLAY ▶</span>
     </a>
   </main>
