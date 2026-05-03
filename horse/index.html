@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Horse Quest</title>
+<style>
+  :root {
+    --bg-1: #f3ead4;       /* warm cream */
+    --bg-2: #e2d2ad;       /* sand */
+    --bg-3: #cebd8e;       /* deep sand */
+    --paper: #fbf5e3;      /* parchment */
+    --panel: #fbf5e3;
+    --border: #5d3b1c;     /* leather brown */
+    --accent: #2c4a2e;     /* forest green */
+    --accent-2: #5d4037;   /* saddle brown */
+    --accent-3: #8a5a2b;   /* warm tan */
+    --gold: #b8860b;       /* dark brass */
+    --gold-soft: #d4a04e;
+    --burgundy: #6e2933;   /* rosette */
+    --burgundy-soft: #963c4a;
+    --good: #3a6b40;
+    --warn: #8b2424;
+    --text: #2a1f0e;
+    --text-soft: #4a3a26;
+    --muted: #7a6a52;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    min-height: 100%;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 60px, rgba(93,59,28,0.025) 60px 61px),
+      repeating-linear-gradient(0deg, transparent 0 60px, rgba(93,59,28,0.025) 60px 61px),
+      linear-gradient(180deg, var(--bg-1) 0%, var(--bg-2) 100%);
+    color: var(--text);
+    font-family: 'Georgia', 'Source Serif Pro', serif;
+    overflow-x: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body { min-height: 100vh; }
+
+  /* HUB / MENU buttons */
+  .hub-link, .home-btn {
+    position: fixed; top: 14px; z-index: 30;
+    display: inline-block; padding: 8px 16px;
+    background: var(--paper);
+    border-radius: 4px;
+    font-family: 'Georgia', serif;
+    font-size: 0.85em; font-weight: 700;
+    letter-spacing: 1.5px;
+    text-decoration: none; cursor: pointer;
+    transition: transform 0.1s, background 0.15s, color 0.15s;
+    text-transform: uppercase;
+  }
+  .hub-link {
+    right: 14px;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+  }
+  .hub-link:hover { background: var(--accent); color: var(--paper); transform: translateY(-1px); }
+  .home-btn {
+    left: 14px;
+    color: var(--burgundy);
+    border: 2px solid var(--burgundy);
+    display: none;
+  }
+  .home-btn:hover { background: var(--burgundy); color: var(--paper); transform: translateY(-1px); }
+  .home-btn.show { display: inline-block; }
+
+  /* layout */
+  .screen {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    padding: 80px 18px 40px;
+    display: flex; flex-direction: column;
+    align-items: center;
+  }
+  .hidden { display: none !important; }
+
+  /* ============ START ============ */
+  .start-card {
+    background: var(--paper);
+    border: 3px double var(--border);
+    border-radius: 6px;
+    padding: 44px 36px 36px;
+    text-align: center;
+    max-width: 580px;
+    width: 100%;
+    box-shadow: 0 8px 30px rgba(93,59,28,0.25);
+    position: relative;
+    margin-top: 20px;
+  }
+  .start-card::before, .start-card::after {
+    content: '';
+    position: absolute;
+    left: 24px; right: 24px; height: 1px;
+    background: var(--accent-3);
+  }
+  .start-card::before { top: 12px; }
+  .start-card::after { bottom: 12px; }
+  .start-card .crest {
+    font-size: 5.6em; line-height: 1;
+    margin-bottom: 4px;
+  }
+  .start-card .deco {
+    color: var(--gold);
+    letter-spacing: 12px;
+    font-size: 0.9em;
+    margin-bottom: 10px;
+  }
+  .start-card h1 {
+    font-family: 'Georgia', serif;
+    font-size: 2.8em;
+    color: var(--accent);
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+    font-variant: small-caps;
+    font-weight: 700;
+  }
+  .start-card .sub {
+    color: var(--text-soft);
+    font-size: 1em;
+    font-style: italic;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+  .start-card .desc {
+    color: var(--text-soft);
+    font-size: 0.98em;
+    line-height: 1.6;
+    margin-bottom: 30px;
+    max-width: 460px;
+    margin-left: auto; margin-right: auto;
+  }
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .mode-btn {
+    background: var(--accent);
+    color: var(--paper);
+    border: 2px solid var(--accent);
+    padding: 18px 14px;
+    border-radius: 4px;
+    font-family: 'Georgia', serif;
+    font-size: 0.95em;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: transform 0.12s, background 0.15s;
+    text-transform: uppercase;
+    line-height: 1.3;
+  }
+  .mode-btn .mb-icon { display: block; font-size: 1.9em; line-height: 1; margin-bottom: 8px; letter-spacing: 0; }
+  .mode-btn .mb-sub { display: block; font-size: 0.7em; font-weight: 400; opacity: 0.85; margin-top: 6px; letter-spacing: 1px; text-transform: none; font-style: italic; }
+  .mode-btn:hover { transform: translateY(-2px); background: var(--accent-2); border-color: var(--accent-2); }
+  .mode-btn.brown { background: var(--accent-2); border-color: var(--accent-2); }
+  .mode-btn.brown:hover { background: var(--accent-3); border-color: var(--accent-3); }
+  .mode-btn.gold { background: var(--gold); border-color: var(--gold); color: #2a1f0e; }
+  .mode-btn.gold:hover { background: var(--gold-soft); border-color: var(--gold-soft); }
+
+  /* ============ EXPLORE — GRID ============ */
+  .section-header {
+    text-align: center;
+    margin-bottom: 26px;
+    max-width: 760px;
+  }
+  .section-header h2 {
+    font-family: 'Georgia', serif;
+    font-size: 2em;
+    color: var(--accent);
+    letter-spacing: 4px;
+    font-variant: small-caps;
+    margin-bottom: 4px;
+  }
+  .section-header .sep {
+    color: var(--gold);
+    letter-spacing: 8px;
+    font-size: 0.85em;
+    margin: 4px 0 8px;
+  }
+  .section-header p {
+    color: var(--text-soft);
+    font-size: 0.95em;
+    font-style: italic;
+  }
+  .breed-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 18px;
+    width: 100%;
+    max-width: 1140px;
+  }
+  .breed-tile {
+    background: var(--paper);
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    padding: 18px 14px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.18s, box-shadow 0.2s;
+    box-shadow: 0 3px 10px rgba(93,59,28,0.15);
+    position: relative;
+  }
+  .breed-tile:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 22px rgba(93,59,28,0.3);
+  }
+  .breed-portrait {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    margin: 4px auto 14px;
+    background: var(--breed-grad, linear-gradient(135deg, #d4a574, #6b4226));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 4.4em; line-height: 1;
+    box-shadow: inset 0 -8px 16px rgba(0,0,0,0.18), 0 4px 10px rgba(93,59,28,0.3);
+    border: 3px solid var(--paper);
+    outline: 2px solid var(--border);
+    position: relative;
+  }
+  .breed-tile h3 {
+    font-family: 'Georgia', serif;
+    color: var(--accent);
+    font-size: 1.2em;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+    font-variant: small-caps;
+    font-weight: 700;
+  }
+  .breed-tile .origin {
+    color: var(--muted);
+    font-size: 0.82em;
+    font-style: italic;
+  }
+
+  /* ============ EXPLORE — DETAIL ============ */
+  .detail-card {
+    background: var(--paper);
+    border: 3px double var(--border);
+    border-radius: 6px;
+    padding: 32px 32px 28px;
+    max-width: 760px;
+    width: 100%;
+    box-shadow: 0 8px 30px rgba(93,59,28,0.25);
+    position: relative;
+  }
+  .detail-portrait {
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    margin: 0 auto 16px;
+    background: var(--breed-grad, linear-gradient(135deg, #d4a574, #6b4226));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7.4em; line-height: 1;
+    box-shadow: inset 0 -12px 22px rgba(0,0,0,0.2), 0 8px 20px rgba(93,59,28,0.35);
+    border: 4px solid var(--paper);
+    outline: 3px solid var(--border);
+  }
+  .detail-card h2 {
+    font-family: 'Georgia', serif;
+    color: var(--accent);
+    font-size: 2.2em;
+    text-align: center;
+    margin-bottom: 4px;
+    letter-spacing: 4px;
+    font-variant: small-caps;
+  }
+  .detail-card .breed-tag {
+    text-align: center;
+    color: var(--gold);
+    font-style: italic;
+    margin-bottom: 22px;
+    font-size: 1em;
+    letter-spacing: 2px;
+  }
+  .fact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .fact {
+    background: rgba(243, 234, 212, 0.55);
+    border-radius: 4px;
+    padding: 12px 14px;
+    border-left: 4px solid var(--accent);
+  }
+  .fact .label {
+    font-family: 'Georgia', serif;
+    font-size: 0.7em;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .fact .value {
+    color: var(--text);
+    font-size: 0.98em;
+    line-height: 1.45;
+  }
+  .fun-fact {
+    background: linear-gradient(180deg, rgba(184,134,11,0.10) 0%, rgba(184,134,11,0.04) 100%);
+    border: 1.5px solid var(--gold);
+    border-left: 5px solid var(--gold);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin: 18px 0 6px;
+    font-size: 0.96em;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .fun-fact strong {
+    display: block;
+    color: var(--gold);
+    margin-bottom: 6px;
+    letter-spacing: 2.5px;
+    font-size: 0.78em;
+    font-family: 'Georgia', serif;
+  }
+
+  .nav-row {
+    display: flex; justify-content: center; gap: 10px;
+    margin-top: 20px; flex-wrap: wrap;
+  }
+  .nav-btn {
+    background: var(--accent);
+    color: var(--paper);
+    border: 2px solid var(--accent);
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-family: 'Georgia', serif;
+    font-size: 0.92em; font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.15s;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .nav-btn:hover { transform: translateY(-2px); background: var(--accent-2); border-color: var(--accent-2); }
+  .nav-btn.gold { background: var(--gold); border-color: var(--gold); color: var(--text); }
+  .nav-btn.gold:hover { background: var(--gold-soft); border-color: var(--gold-soft); }
+  .nav-btn.ghost {
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+  }
+  .nav-btn.ghost:hover { background: var(--accent); color: var(--paper); }
+
+  /* ============ QUIZ ============ */
+  .quiz-card {
+    background: var(--paper);
+    border: 3px double var(--border);
+    border-radius: 6px;
+    padding: 32px 30px 26px;
+    max-width: 680px;
+    width: 100%;
+    box-shadow: 0 8px 30px rgba(93,59,28,0.25);
+    text-align: center;
+  }
+  .quiz-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+    font-family: 'Georgia', serif;
+    font-size: 0.78em;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+  .quiz-meta .left { color: var(--accent); font-weight: 700; }
+  .quiz-meta .right { color: var(--gold); font-weight: 700; }
+  .quiz-progress {
+    display: flex; justify-content: center; gap: 5px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .quiz-dot {
+    width: 12px; height: 12px;
+    background: rgba(93,59,28,0.18);
+    transition: background 0.2s, transform 0.2s;
+    border: 1px solid transparent;
+  }
+  .quiz-dot.active { background: var(--accent); transform: scale(1.25); border-color: var(--text); }
+  .quiz-dot.right { background: var(--good); border-color: var(--good); }
+  .quiz-dot.wrong { background: var(--burgundy); border-color: var(--burgundy); }
+
+  .q-emoji { font-size: 3em; margin-bottom: 4px; line-height: 1; }
+  .q-cat {
+    color: var(--gold);
+    font-family: 'Georgia', serif;
+    font-size: 0.74em; letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .question-text {
+    font-family: 'Georgia', serif;
+    color: var(--text);
+    font-size: 1.25em;
+    line-height: 1.5;
+    margin-bottom: 22px;
+    padding: 0 6px;
+  }
+  .options {
+    display: grid; grid-template-columns: 1fr; gap: 9px;
+  }
+  .option {
+    background: rgba(243, 234, 212, 0.6);
+    border: 2px solid var(--accent-3);
+    border-radius: 4px;
+    padding: 13px 16px;
+    color: var(--text);
+    font-family: 'Georgia', serif;
+    font-size: 1em;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.15s, border-color 0.15s;
+    text-align: left;
+  }
+  .option:hover:not(:disabled) {
+    background: rgba(44,74,46,0.12);
+    border-color: var(--accent);
+    transform: translateX(3px);
+  }
+  .option:disabled { cursor: default; }
+  .option.right {
+    background: rgba(58,107,64,0.22);
+    border-color: var(--good);
+    color: #1f3923;
+    font-weight: 700;
+  }
+  .option.wrong {
+    background: rgba(110,41,51,0.18);
+    border-color: var(--burgundy);
+    color: var(--burgundy);
+    animation: shake 0.4s;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .feedback {
+    margin-top: 18px;
+    min-height: 2.4em;
+    font-size: 0.95em;
+    line-height: 1.5;
+    padding: 0 6px;
+    font-style: italic;
+  }
+  .feedback.right { color: var(--good); font-weight: 600; }
+  .feedback.wrong { color: var(--burgundy); }
+
+  /* RESULT */
+  .result-card {
+    background: var(--paper);
+    border: 3px double var(--gold);
+    border-radius: 6px;
+    padding: 38px 30px;
+    max-width: 580px;
+    width: 100%;
+    box-shadow: 0 8px 30px rgba(93,59,28,0.25);
+    text-align: center;
+  }
+  .result-card .trophy { font-size: 4.4em; line-height: 1; margin-bottom: 6px; }
+  .result-card h2 {
+    font-family: 'Georgia', serif;
+    color: var(--accent);
+    font-size: 2em; margin-bottom: 4px;
+    font-variant: small-caps;
+    letter-spacing: 4px;
+  }
+  .score-display {
+    font-family: 'Georgia', serif;
+    font-size: 3em;
+    color: var(--gold);
+    font-weight: 800;
+    margin: 14px 0 4px;
+    letter-spacing: 4px;
+  }
+  .rank {
+    color: var(--burgundy);
+    font-family: 'Georgia', serif;
+    font-size: 1.2em; font-weight: 700;
+    margin-bottom: 12px;
+    letter-spacing: 4px;
+    font-variant: small-caps;
+  }
+  .result-card .msg {
+    color: var(--text-soft);
+    font-size: 0.96em;
+    line-height: 1.55;
+    margin-bottom: 8px;
+    max-width: 440px;
+    margin-left: auto; margin-right: auto;
+  }
+  .best-msg {
+    color: var(--gold);
+    font-weight: 700;
+    font-size: 0.92em;
+    letter-spacing: 1.5px;
+    margin: 8px 0 6px;
+  }
+
+  /* FACTS mode */
+  .fact-card-big {
+    background: var(--paper);
+    border: 3px double var(--gold);
+    border-radius: 6px;
+    padding: 38px 30px 30px;
+    max-width: 620px;
+    width: 100%;
+    box-shadow: 0 8px 30px rgba(93,59,28,0.25);
+    text-align: center;
+  }
+  .fact-card-big .fc-icon { font-size: 4.4em; line-height: 1; margin-bottom: 6px; }
+  .fact-card-big .fc-cat {
+    color: var(--gold);
+    font-family: 'Georgia', serif;
+    font-size: 0.84em; letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    font-weight: 700;
+  }
+  .fact-card-big .fc-text {
+    font-family: 'Georgia', serif;
+    color: var(--text);
+    font-size: 1.2em;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    padding: 0 8px;
+  }
+  .fact-counter {
+    color: var(--muted);
+    font-size: 0.78em;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  @media (max-width: 540px) {
+    .start-card { padding: 30px 22px; }
+    .start-card h1 { font-size: 2em; letter-spacing: 4px; }
+    .start-card .crest { font-size: 4.4em; }
+    .detail-card, .quiz-card, .result-card, .fact-card-big { padding: 26px 20px; }
+    .detail-portrait { width: 150px; height: 150px; font-size: 5.6em; }
+    .breed-portrait { width: 96px; height: 96px; font-size: 3.6em; }
+    .home-btn, .hub-link { font-size: 0.74em; padding: 6px 12px; top: 10px; }
+    .question-text { font-size: 1.1em; }
+  }
+</style>
+</head>
+<body>
+
+<button class="home-btn" id="homeBtn">Menu</button>
+<a href="../" class="hub-link" title="Back to Game Hub">Hub</a>
+
+<!-- ===== START ===== -->
+<div class="screen" id="startScreen">
+  <div class="start-card">
+    <div class="crest">🐎</div>
+    <div class="deco">❉ ❉ ❉</div>
+    <h1>Horse Quest</h1>
+    <div class="sub">Breeds · Anatomy · Tack · Disciplines · History</div>
+    <p class="desc">
+      A complete reference for horse lovers. Meet 14 of the world's great horse breeds,
+      study tack and gaits, learn the lingo, and put your knowledge in the test.
+    </p>
+    <div class="mode-grid">
+      <button class="mode-btn" data-mode="explore">
+        <span class="mb-icon">📖</span>
+        Breeds
+        <span class="mb-sub">14 detailed profiles</span>
+      </button>
+      <button class="mode-btn brown" data-mode="quiz">
+        <span class="mb-icon">🎯</span>
+        Quiz
+        <span class="mb-sub">90+ questions, 15 per round</span>
+      </button>
+      <button class="mode-btn gold" data-mode="facts">
+        <span class="mb-icon">❉</span>
+        Fun Facts
+        <span class="mb-sub">55+ amazing facts</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EXPLORE GRID ===== -->
+<div class="screen hidden" id="exploreGrid">
+  <div class="section-header">
+    <h2>The Breeds</h2>
+    <div class="sep">❉ ❉ ❉</div>
+    <p>Click any breed to study its origin, conformation, temperament, and lore.</p>
+  </div>
+  <div class="breed-grid" id="breedGrid"></div>
+</div>
+
+<!-- ===== EXPLORE DETAIL ===== -->
+<div class="screen hidden" id="exploreDetail">
+  <div class="detail-card" id="detailCard"></div>
+</div>
+
+<!-- ===== QUIZ ===== -->
+<div class="screen hidden" id="quizScreen">
+  <div class="quiz-card">
+    <div class="quiz-meta">
+      <div class="left" id="qScoreL">SCORE 0</div>
+      <div class="right" id="qBest">BEST —</div>
+    </div>
+    <div class="quiz-progress" id="quizProgress"></div>
+    <div class="q-emoji" id="qEmoji">🐴</div>
+    <div class="q-cat" id="qCat">CATEGORY</div>
+    <div class="question-text" id="qText">—</div>
+    <div class="options" id="qOptions"></div>
+    <div class="feedback" id="qFeedback">&nbsp;</div>
+  </div>
+</div>
+
+<!-- ===== RESULT ===== -->
+<div class="screen hidden" id="resultScreen">
+  <div class="result-card">
+    <div class="trophy" id="trophyIcon">🏆</div>
+    <h2 id="resultTitle">Round Complete</h2>
+    <div class="score-display" id="scoreDisplay">0 / 0</div>
+    <div class="rank" id="rankText">—</div>
+    <p class="msg" id="resultMsg"></p>
+    <div class="best-msg" id="bestMsg"></div>
+    <div class="nav-row">
+      <button class="nav-btn gold" id="quizAgainBtn">Try Again</button>
+      <button class="nav-btn ghost" id="resultMenuBtn">Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FACTS ===== -->
+<div class="screen hidden" id="factScreen">
+  <div class="fact-card-big">
+    <div class="fc-icon" id="fcIcon">❉</div>
+    <div class="fc-cat" id="fcCat">FUN FACT</div>
+    <div class="fc-text" id="fcText">—</div>
+    <div class="fact-counter" id="factCounter">1 of 55</div>
+    <div class="nav-row">
+      <button class="nav-btn ghost" id="prevFactBtn">◀ Prev</button>
+      <button class="nav-btn" id="nextFactBtn">Next ▶</button>
+      <button class="nav-btn gold" id="factMenuBtn">Menu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   BREEDS
+   ============================================================ */
+const BREEDS = [
+  { name: 'Arabian', emoji: '🐎',
+    origin: 'Arabian Peninsula',
+    age: 'Over 4,500 years — the oldest documented breed',
+    height: '14.1–15.1 hh (1.45–1.55 m)',
+    coat: 'Bay, chestnut, gray, black; never spotted',
+    temper: 'Hot-blooded, intelligent, exceptionally loyal',
+    famous: 'Endurance racing; foundation sire of countless modern breeds',
+    funFact: 'Most Arabians have 17 ribs (one fewer than other horses), 5 lumbar vertebrae (one fewer), and 16 tail vertebrae (two fewer). That accounts for the famously short back and high-set tail.',
+    grad: 'linear-gradient(135deg, #e0c08a 0%, #8b5a2b 100%)' },
+  { name: 'Thoroughbred', emoji: '🏇',
+    origin: 'England, late 17th century',
+    age: 'About 300 years',
+    height: '15.2–17 hh (1.57–1.73 m)',
+    coat: 'Bay, chestnut, dark brown, black, gray',
+    temper: 'Hot-blooded, athletic, sensitive, fiery',
+    famous: 'Flat racing — built for sustained speed',
+    funFact: 'Every modern Thoroughbred descends from just three founding stallions imported to England between 1690 and 1730: the Darley Arabian, the Godolphin Arabian, and the Byerley Turk.',
+    grad: 'linear-gradient(135deg, #a17050 0%, #4a2818 100%)' },
+  { name: 'Quarter Horse', emoji: '🐴',
+    origin: 'United States, colonial era',
+    age: 'About 400 years',
+    height: '14–16 hh (1.42–1.63 m)',
+    coat: 'Sorrel, bay, dun, palomino, buckskin, black',
+    temper: 'Calm, sensible, exceptionally trainable',
+    famous: 'Sprinting and Western disciplines (reining, cutting, barrel racing)',
+    funFact: 'Named for being the fastest breed over a quarter mile. Top sprint speed reaches 88 km/h (55 mph) — faster than a Thoroughbred at that distance.',
+    grad: 'linear-gradient(135deg, #e8b876 0%, #a0561e 100%)' },
+  { name: 'Friesian', emoji: '🦄',
+    origin: 'Friesland, Netherlands',
+    age: 'Documented since the 13th century',
+    height: '15–17 hh (1.52–1.73 m)',
+    coat: 'Always solid black (a small star is the only permitted white)',
+    temper: 'Calm, willing, intelligent',
+    famous: 'Carriage driving and dressage; iconic film horse',
+    funFact: 'The breed nearly went extinct after WWII — only three breeding stallions remained in 1913. Careful inbreeding rebuilt the breed, which is why all modern Friesians share concentrated genetics.',
+    grad: 'linear-gradient(135deg, #2a2330 0%, #0a0810 100%)' },
+  { name: 'Andalusian', emoji: '🐎',
+    origin: 'Iberian Peninsula',
+    age: 'Documented since at least the 15th century',
+    height: '15–16.2 hh (1.52–1.68 m)',
+    coat: 'About 80% gray; also bay, black, chestnut',
+    temper: 'Proud, sensitive, deeply willing',
+    famous: 'Classical dressage, working equitation, doma vaquera',
+    funFact: 'Also called the "Pure Spanish Horse" (PRE — Pura Raza Española). For centuries riding them was a privilege reserved for nobility, earning them the nickname "horse of kings."',
+    grad: 'linear-gradient(135deg, #d8d4cc 0%, #6e6a62 100%)' },
+  { name: 'Appaloosa', emoji: '🐴',
+    origin: 'Pacific Northwest USA — Nez Perce people',
+    age: 'Bred carefully since the 1700s',
+    height: '14.2–16 hh (1.45–1.63 m)',
+    coat: 'Spotted: leopard, blanket, snowflake, marble, few-spot',
+    temper: 'Brave, smart, dependable',
+    famous: 'Distinctive spotted coat patterns; Western disciplines and trail',
+    funFact: 'Three traits identify a true Appaloosa even on a solid-coated horse: striped hooves, a white sclera around the eye, and mottled (spotty) skin on the muzzle and genitals.',
+    grad: 'linear-gradient(135deg, #f0e6d2 0%, #5a4a2c 100%)' },
+  { name: 'Mustang', emoji: '🐎',
+    origin: 'American West (feral)',
+    age: 'Free-roaming since the 1500s',
+    height: '14–15 hh (1.42–1.52 m)',
+    coat: 'Every color — populations breed unmanaged',
+    temper: 'Tough, surefooted, intelligent, semi-wild',
+    famous: 'Free-roaming herds across the western United States',
+    funFact: 'Despite being called wild, Mustangs are technically feral — they descend from domesticated Spanish horses brought to the Americas in the 1500s. About 82,000 still roam BLM-managed land today.',
+    grad: 'linear-gradient(135deg, #b8895c 0%, #5a3520 100%)' },
+  { name: 'Clydesdale', emoji: '🐴',
+    origin: 'Scotland (Lanarkshire)',
+    age: 'Bred since the 1700s',
+    height: '16–18 hh (1.62–1.83 m)',
+    coat: 'Bay or brown with white blaze and feathered legs',
+    temper: 'Calm, kind, exceptionally tolerant — a gentle giant',
+    famous: 'Heavy draft work; the iconic Budweiser carriage horse',
+    funFact: 'A working Clydesdale eats 11–14 kg of hay and 9 kg of grain daily and drinks up to 113 liters of water. Its silken leg feathers must be washed carefully — they\'re prone to a skin condition called "scratches."',
+    grad: 'linear-gradient(135deg, #8b5a3c 0%, #2c1a10 100%)' },
+  { name: 'Akhal-Teke', emoji: '✨',
+    origin: 'Turkmenistan (Karakum Desert)',
+    age: 'About 3,000 years — possibly the oldest surviving sporting breed',
+    height: '14.2–16 hh (1.45–1.63 m)',
+    coat: 'Bay, chestnut, black, gray — often with a metallic sheen',
+    temper: 'Sensitive, brave, fiercely bonded to one rider',
+    famous: 'Endurance and the unique metallic coat',
+    funFact: 'The shimmer comes from hair with an unusually thin transparent core — light passes partway through, then reflects off the inner pigment, creating the metallic effect. Only about 6,600 Akhal-Tekes exist worldwide.',
+    grad: 'linear-gradient(135deg, #e8c46a 0%, #a06420 100%)' },
+  { name: 'Lipizzan', emoji: '🦄',
+    origin: 'Lipica, Slovenia (founded 1580)',
+    age: 'About 440 years',
+    height: '14.2–15.2 hh (1.45–1.57 m)',
+    coat: 'Born dark; turn white between ages 6 and 10',
+    temper: 'Brilliant, willing, highly trainable',
+    famous: 'The Spanish Riding School of Vienna — classical "airs above the ground"',
+    funFact: 'Performance Lipizzans master haute école movements like the levade (a controlled rear), capriole (a leap with a kick), and courbette (a series of jumps on the hind legs). Each move took years of training and was developed for medieval cavalry combat.',
+    grad: 'linear-gradient(135deg, #f0ece0 0%, #948c7a 100%)' },
+  { name: 'Shetland Pony', emoji: '🐴',
+    origin: 'Shetland Isles, Scotland',
+    age: 'On the islands for over 2,000 years',
+    height: 'Under 11 hh (1.07 m)',
+    coat: 'Every color; thick double coat in winter',
+    temper: 'Cheeky, clever, immensely strong for size',
+    famous: 'Hardiness; once worked in coal mines',
+    funFact: 'Pound for pound, Shetland Ponies are the strongest equine in the world. They can pull twice their body weight; an average Shetland (180 kg) can pull around 360 kg. Coal mines used them underground until the 1990s.',
+    grad: 'linear-gradient(135deg, #a8763a 0%, #4a2c14 100%)' },
+  { name: 'Paint Horse', emoji: '🎨',
+    origin: 'United States',
+    age: 'Recognized as a breed in 1965',
+    height: '14.2–16 hh (1.45–1.63 m)',
+    coat: 'White patches over any base color',
+    temper: 'Friendly, even-tempered, eager to work',
+    famous: 'Patchwork coat patterns and Western disciplines',
+    funFact: 'The three coat patterns are Tobiano (white crosses the back, dark head), Overo (dark crosses the back, white face and belly), and Tovero (a mix). Despite the name, "Pinto" refers to the color pattern in any breed; "Paint" is a specific stock-horse breed.',
+    grad: 'linear-gradient(135deg, #f5f0e0 0%, #6b4226 100%)' },
+  { name: 'Shire', emoji: '🐎',
+    origin: 'England (Midlands)',
+    age: 'Bred since the late Middle Ages',
+    height: '17–19 hh (1.73–1.93 m) — the tallest breed',
+    coat: 'Bay, brown, black, gray; feathered legs',
+    temper: 'Patient, gentle, immensely powerful',
+    famous: 'The world\'s biggest horse breed; heavy draft work',
+    funFact: 'Sampson, a Shire stallion foaled in 1846, stood 21.2½ hands (2.20 m / 7\'2½") at the withers and weighed 1,524 kg — the tallest and heaviest horse ever recorded. He was renamed "Mammoth" later in life for obvious reasons.',
+    grad: 'linear-gradient(135deg, #5d3a1f 0%, #1a0e08 100%)' },
+  { name: 'Mongolian Horse', emoji: '🐴',
+    origin: 'Mongolia',
+    age: 'Almost unchanged for 4,000+ years',
+    height: '12–14 hh (1.22–1.42 m)',
+    coat: 'Every natural color; thick winter coat',
+    temper: 'Hardy, semi-wild, deeply independent',
+    famous: 'Genghis Khan\'s cavalry horse — built the largest land empire ever',
+    funFact: 'Mongolian horses outnumber people in Mongolia: about 4 million horses for 3.4 million people. Most live in semi-wild herds and are only "borrowed" by their owners for riding. The traditional Mongolian dairy drink airag is made from fermented mare\'s milk.',
+    grad: 'linear-gradient(135deg, #b8895c 0%, #4a2c14 100%)' }
+];
+
+/* ============================================================
+   QUIZ BANK — 90 questions, categorized
+   ============================================================ */
+const QUIZ_BANK = [
+  // ===== BREEDS (20) =====
+  { c: 'BREEDS', e: '🐎', q: 'Which is the oldest documented horse breed in the world?', a: 'Arabian', opts: ['Arabian', 'Mongolian', 'Mustang', 'Quarter Horse'] },
+  { c: 'BREEDS', e: '🐎', q: 'Which breed is the tallest in the world?', a: 'Shire', opts: ['Shire', 'Clydesdale', 'Belgian Draft', 'Friesian'] },
+  { c: 'BREEDS', e: '🐎', q: 'Which is the smallest horse breed in the world?', a: 'Falabella', opts: ['Falabella', 'Shetland Pony', 'Mini Donkey', 'Welsh Pony'] },
+  { c: 'BREEDS', e: '🐴', q: 'Pound for pound, which is the strongest equine breed?', a: 'Shetland Pony', opts: ['Shetland Pony', 'Belgian Draft', 'Clydesdale', 'Quarter Horse'] },
+  { c: 'BREEDS', e: '✨', q: 'Which breed is known as the "Golden Horse" for its metallic coat sheen?', a: 'Akhal-Teke', opts: ['Akhal-Teke', 'Palomino', 'Friesian', 'Lipizzan'] },
+  { c: 'BREEDS', e: '🦄', q: 'Lipizzans are born dark and gradually turn what color?', a: 'White', opts: ['White', 'Black', 'Bay', 'Spotted'] },
+  { c: 'BREEDS', e: '💨', q: 'Which breed is the fastest sprinter over a quarter mile?', a: 'Quarter Horse', opts: ['Quarter Horse', 'Thoroughbred', 'Arabian', 'Standardbred'] },
+  { c: 'BREEDS', e: '🏇', q: 'Every modern Thoroughbred descends from how many founding stallions?', a: 'Three', opts: ['Three', 'One', 'Twelve', 'Hundreds'] },
+  { c: 'BREEDS', e: '🐎', q: 'The Friesian breed comes from which country?', a: 'Netherlands', opts: ['Netherlands', 'Belgium', 'Germany', 'Denmark'] },
+  { c: 'BREEDS', e: '👑', q: 'The Andalusian is also called "the horse of..."', a: 'Kings', opts: ['Kings', 'Knights', 'Wizards', 'Pirates'] },
+  { c: 'BREEDS', e: '🐴', q: 'Which breed has a spotted coat as its defining feature?', a: 'Appaloosa', opts: ['Appaloosa', 'Paint Horse', 'Pinto', 'Buckskin'] },
+  { c: 'BREEDS', e: '🏜️', q: 'The Mustang descends from horses brought to America by which people?', a: 'Spanish explorers', opts: ['Spanish explorers', 'Vikings', 'British settlers', 'Native Americans'] },
+  { c: 'BREEDS', e: '🐴', q: 'Which Irish breed is famous for jumping ability?', a: 'Connemara Pony', opts: ['Connemara Pony', 'Welsh Pony', 'Shetland', 'Dartmoor'] },
+  { c: 'BREEDS', e: '🐎', q: 'Which German breed dominates modern dressage and showjumping?', a: 'Hanoverian', opts: ['Hanoverian', 'Trakehner', 'Holsteiner', 'All of these'] },
+  { c: 'BREEDS', e: '🐎', q: 'The Tennessee Walking Horse is famous for which gait?', a: 'Running walk', opts: ['Running walk', 'Tölt', 'Pace', 'Piaffe'] },
+  { c: 'BREEDS', e: '🇮🇸', q: 'The Icelandic Horse has a fifth gait called what?', a: 'Tölt', opts: ['Tölt', 'Pace', 'Trot', 'Slow gait'] },
+  { c: 'BREEDS', e: '🐴', q: 'The only truly wild horse remaining (never domesticated) is?', a: 'Przewalski\'s Horse', opts: ['Przewalski\'s Horse', 'Mustang', 'Brumby', 'Camargue'] },
+  { c: 'BREEDS', e: '🐎', q: 'The white horses of southern France\'s wetlands are the?', a: 'Camargue', opts: ['Camargue', 'Lipizzan', 'Andalusian', 'Lusitano'] },
+  { c: 'BREEDS', e: '🇵🇹', q: 'The Portuguese counterpart to the Andalusian is the?', a: 'Lusitano', opts: ['Lusitano', 'Marwari', 'Friesian', 'Hanoverian'] },
+  { c: 'BREEDS', e: '🐎', q: 'Which breed nearly went extinct after WWII with only 3 stallions left?', a: 'Friesian', opts: ['Friesian', 'Lipizzan', 'Akhal-Teke', 'Cleveland Bay'] },
+
+  // ===== ANATOMY (12) =====
+  { c: 'ANATOMY', e: '📏', q: 'The highest point of a horse\'s shoulder, where height is measured, is called the?', a: 'Withers', opts: ['Withers', 'Croup', 'Crest', 'Poll'] },
+  { c: 'ANATOMY', e: '🦴', q: 'The joint just above the hoof is the?', a: 'Fetlock', opts: ['Fetlock', 'Pastern', 'Hock', 'Cannon'] },
+  { c: 'ANATOMY', e: '🦴', q: 'The bone between the knee and the fetlock is called the?', a: 'Cannon bone', opts: ['Cannon bone', 'Pastern', 'Splint bone', 'Coffin bone'] },
+  { c: 'ANATOMY', e: '🐎', q: 'The mane hair that hangs between a horse\'s ears is the?', a: 'Forelock', opts: ['Forelock', 'Topknot', 'Crest', 'Bangs'] },
+  { c: 'ANATOMY', e: '🐴', q: 'The triangular shock-absorbing pad on the underside of the hoof is the?', a: 'Frog', opts: ['Frog', 'Sole', 'Heel', 'Bar'] },
+  { c: 'ANATOMY', e: '🦵', q: 'The "knee" of a horse\'s hind leg is actually equivalent to the human?', a: 'Ankle', opts: ['Ankle', 'Knee', 'Hip', 'Heel'] },
+  { c: 'ANATOMY', e: '🦵', q: 'The joint on the hind leg roughly equivalent to the human knee is the?', a: 'Stifle', opts: ['Stifle', 'Hock', 'Gaskin', 'Croup'] },
+  { c: 'ANATOMY', e: '🐎', q: 'The top of a horse\'s hindquarters is called the?', a: 'Croup', opts: ['Croup', 'Withers', 'Crest', 'Loin'] },
+  { c: 'ANATOMY', e: '🦷', q: 'How many teeth does a typical adult horse have?', a: '36–44', opts: ['36–44', '20', '60', '72'] },
+  { c: 'ANATOMY', e: '👁️', q: 'The horse\'s eye is the largest of any what?', a: 'Land mammal', opts: ['Land mammal', 'Mammal of any kind', 'Bird or mammal', 'Hoofed animal only'] },
+  { c: 'ANATOMY', e: '👀', q: 'How many degrees of vision does a horse have around itself?', a: 'About 350°', opts: ['About 350°', '90°', '180°', 'Full 360°'] },
+  { c: 'ANATOMY', e: '🦷', q: 'Horse hooves are made of the same material as our?', a: 'Fingernails', opts: ['Fingernails', 'Bones', 'Cartilage', 'Skin'] },
+
+  // ===== COATS & MARKINGS (10) =====
+  { c: 'COAT & MARKINGS', e: '🎨', q: 'A "bay" horse has what coloring?', a: 'Brown body with black mane, tail, and lower legs', opts: ['Brown body with black mane, tail, and lower legs', 'All red-brown including mane', 'Gray with black points', 'Spotted'] },
+  { c: 'COAT & MARKINGS', e: '🌟', q: 'A palomino\'s mane and tail are what color?', a: 'White or cream', opts: ['White or cream', 'Black', 'Gold', 'Same as the body'] },
+  { c: 'COAT & MARKINGS', e: '🎨', q: 'A "roan" coat is characterized by?', a: 'Mixed white hairs throughout the body color', opts: ['Mixed white hairs throughout the body color', 'Large white patches', 'A spotted pattern', 'A solid white coat'] },
+  { c: 'COAT & MARKINGS', e: '🐴', q: 'A "dun" horse has which classic primitive marking?', a: 'A dorsal stripe down the back', opts: ['A dorsal stripe down the back', 'White stockings', 'A spotted blanket', 'A blaze'] },
+  { c: 'COAT & MARKINGS', e: '⭐', q: 'A small white mark on a horse\'s forehead is called a?', a: 'Star', opts: ['Star', 'Snip', 'Blaze', 'Stripe'] },
+  { c: 'COAT & MARKINGS', e: '🎨', q: 'A wide white stripe running down the face is called a?', a: 'Blaze', opts: ['Blaze', 'Star', 'Snip', 'Strip'] },
+  { c: 'COAT & MARKINGS', e: '🐎', q: 'A small white marking just between the nostrils is a?', a: 'Snip', opts: ['Snip', 'Star', 'Blaze', 'Bald face'] },
+  { c: 'COAT & MARKINGS', e: '🦵', q: 'A white leg marking that reaches up to the fetlock is called a?', a: 'Sock', opts: ['Sock', 'Stocking', 'Coronet', 'Pastern'] },
+  { c: 'COAT & MARKINGS', e: '🦵', q: 'A white leg marking that reaches up to the knee or hock is called a?', a: 'Stocking', opts: ['Stocking', 'Sock', 'Pastern', 'Boot'] },
+  { c: 'COAT & MARKINGS', e: '🐴', q: 'A "buckskin" horse has what coloring?', a: 'Cream/tan body with black mane, tail, and lower legs', opts: ['Cream/tan body with black mane, tail, and lower legs', 'Pure gold all over', 'White with brown patches', 'Mottled gray'] },
+
+  // ===== TACK & EQUIPMENT (12) =====
+  { c: 'TACK', e: '🐴', q: 'The strap that holds the saddle on the horse is the?', a: 'Girth', opts: ['Girth', 'Throatlatch', 'Halter strap', 'Surcingle'] },
+  { c: 'TACK', e: '🐎', q: 'The metal mouthpiece in a bridle that the horse holds is called the?', a: 'Bit', opts: ['Bit', 'Bridoon', 'Curb', 'Mouthpiece'] },
+  { c: 'TACK', e: '🐴', q: 'The headgear that a horse wears for riding, with reins attached, is the?', a: 'Bridle', opts: ['Bridle', 'Halter', 'Headcollar', 'Hackamore'] },
+  { c: 'TACK', e: '🐎', q: 'The pommel is at which end of the saddle?', a: 'Front', opts: ['Front', 'Back', 'Side', 'Underneath'] },
+  { c: 'TACK', e: '🐎', q: 'The cantle is at which end of the saddle?', a: 'Back', opts: ['Back', 'Front', 'Side', 'Underneath'] },
+  { c: 'TACK', e: '🐴', q: 'A bitless bridle is also called a?', a: 'Hackamore', opts: ['Hackamore', 'Sidepull', 'Snaffle', 'Pelham'] },
+  { c: 'TACK', e: '🐎', q: 'The most common everyday type of bit is the?', a: 'Snaffle', opts: ['Snaffle', 'Curb', 'Pelham', 'Gag'] },
+  { c: 'TACK', e: '🐎', q: 'The strap that crosses a horse\'s forehead on a bridle is the?', a: 'Browband', opts: ['Browband', 'Noseband', 'Throatlatch', 'Crownpiece'] },
+  { c: 'TACK', e: '🐴', q: 'The pad placed under the saddle to protect the horse\'s back is called?', a: 'Saddle pad (or numnah)', opts: ['Saddle pad (or numnah)', 'Blanket', 'Sheet', 'Wither pad'] },
+  { c: 'TACK', e: '🐎', q: 'A "curry comb" is used for what purpose?', a: 'Loosening dried mud and dirt from the coat', opts: ['Loosening dried mud and dirt from the coat', 'Cleaning hooves', 'Combing the mane', 'Polishing the hooves'] },
+  { c: 'TACK', e: '🐴', q: 'A "hoof pick" is used to?', a: 'Clean dirt and stones from the hoof', opts: ['Clean dirt and stones from the hoof', 'Trim the hoof', 'Comb the fetlock feathers', 'Clean teeth'] },
+  { c: 'TACK', e: '🐎', q: 'The piece of tack the rider puts their feet in is the?', a: 'Stirrup', opts: ['Stirrup', 'Iron', 'Foothold', 'Strap'] },
+
+  // ===== GAITS (6) =====
+  { c: 'GAITS', e: '🦵', q: 'How many beats does the trot have?', a: 'Two', opts: ['Two', 'Three', 'Four', 'One'] },
+  { c: 'GAITS', e: '🦵', q: 'The canter is a gait of how many beats?', a: 'Three', opts: ['Three', 'Two', 'Four', 'Five'] },
+  { c: 'GAITS', e: '💨', q: 'The fastest natural gait of a horse is the?', a: 'Gallop', opts: ['Gallop', 'Canter', 'Trot', 'Pace'] },
+  { c: 'GAITS', e: '🚶', q: 'The walk is a gait of how many beats?', a: 'Four', opts: ['Four', 'Two', 'Three', 'One'] },
+  { c: 'GAITS', e: '🐎', q: '"Pacing" describes a gait where the horse moves which legs together?', a: 'Both legs on the same side together', opts: ['Both legs on the same side together', 'Diagonal pairs', 'All four at once', 'Front legs only'] },
+  { c: 'GAITS', e: '🇮🇸', q: 'The smooth four-beat gait unique to Icelandic Horses is the?', a: 'Tölt', opts: ['Tölt', 'Pace', 'Running walk', 'Slow gait'] },
+
+  // ===== DISCIPLINES (10) =====
+  { c: 'DISCIPLINES', e: '🩰', q: 'Dressage is sometimes called horse?', a: 'Ballet', opts: ['Ballet', 'Boxing', 'Soccer', 'Tennis'] },
+  { c: 'DISCIPLINES', e: '🤸', q: 'Eventing combines which three disciplines?', a: 'Dressage, cross-country, and showjumping', opts: ['Dressage, cross-country, and showjumping', 'Racing, jumping, and dressage', 'Western, dressage, and reining', 'Polo, racing, and jumping'] },
+  { c: 'DISCIPLINES', e: '⛳', q: 'Polo is played with what equipment?', a: 'A long-handled mallet and a wooden ball', opts: ['A long-handled mallet and a wooden ball', 'A racquet and ball', 'A net and ball', 'A pole and a flag'] },
+  { c: 'DISCIPLINES', e: '🤠', q: 'Reining belongs to which family of disciplines?', a: 'Western', opts: ['Western', 'Dressage', 'Eventing', 'Steeplechase'] },
+  { c: 'DISCIPLINES', e: '🏆', q: 'The American "Triple Crown" of horse racing consists of the Kentucky Derby, the Preakness Stakes, and?', a: 'The Belmont Stakes', opts: ['The Belmont Stakes', 'The Breeders\' Cup', 'The Travers', 'The Arc de Triomphe'] },
+  { c: 'DISCIPLINES', e: '🏇', q: 'A "clean round" in showjumping means?', a: 'No fences down and no time penalties', opts: ['No fences down and no time penalties', 'Fastest time', 'Highest jump', 'Most fences cleared'] },
+  { c: 'DISCIPLINES', e: '🏔️', q: 'Endurance racing covers distances up to about?', a: '160 km / 100 miles in a single day', opts: ['160 km / 100 miles in a single day', '40 km', '500 km in one day', '20 km'] },
+  { c: 'DISCIPLINES', e: '🤸', q: 'Vaulting is essentially what?', a: 'Gymnastics performed on a moving horse', opts: ['Gymnastics performed on a moving horse', 'Jumping over fences', 'Western roping', 'A type of dressage'] },
+  { c: 'DISCIPLINES', e: '🐎', q: 'In a steeplechase, horses race over what?', a: 'A course with fences and ditches', opts: ['A course with fences and ditches', 'A flat track', 'Sand and water', 'An indoor arena'] },
+  { c: 'DISCIPLINES', e: '🛢️', q: 'In Western "barrel racing," the horse runs around how many barrels?', a: 'Three', opts: ['Three', 'Two', 'Four', 'Six'] },
+
+  // ===== BEHAVIOR (10) =====
+  { c: 'BEHAVIOR', e: '👂', q: 'Ears pinned flat back against the neck typically mean a horse is?', a: 'Angry or threatening', opts: ['Angry or threatening', 'Happy', 'Sleeping', 'Hungry'] },
+  { c: 'BEHAVIOR', e: '👂', q: 'Ears pricked sharply forward usually mean a horse is?', a: 'Alert and interested', opts: ['Alert and interested', 'Annoyed', 'Bored', 'Sad'] },
+  { c: 'BEHAVIOR', e: '🐎', q: 'A soft, low "nicker" sound is most often a?', a: 'Friendly greeting (especially toward food or familiar people)', opts: ['Friendly greeting (especially toward food or familiar people)', 'Warning', 'Sign of pain', 'Distress call'] },
+  { c: 'BEHAVIOR', e: '🐴', q: 'A horse pawing the ground with a front hoof is usually?', a: 'Impatient or anxious', opts: ['Impatient or anxious', 'Sleepy', 'Greeting you', 'Stretching'] },
+  { c: 'BEHAVIOR', e: '🐎', q: 'A horse rolling on the ground is most often?', a: 'Scratching itches and feeling content', opts: ['Scratching itches and feeling content', 'Injured', 'Aggressive', 'Cold'] },
+  { c: 'BEHAVIOR', e: '🐴', q: 'A horse showing the whites of its eyes ("whale eye") usually means it is?', a: 'Worried or scared', opts: ['Worried or scared', 'Excited and happy', 'Hungry', 'Tired'] },
+  { c: 'BEHAVIOR', e: '🐎', q: '"Cribbing" is an undesirable habit where a horse?', a: 'Bites a surface and sucks in air', opts: ['Bites a surface and sucks in air', 'Walks in circles', 'Refuses to eat', 'Bucks under saddle'] },
+  { c: 'BEHAVIOR', e: '🐴', q: 'When two horses meet and sniff noses, they are?', a: 'Greeting and identifying each other', opts: ['Greeting and identifying each other', 'About to fight', 'Sharing food', 'Looking for a foal'] },
+  { c: 'BEHAVIOR', e: '🐎', q: 'A horse swishing its tail vigorously most likely means it is?', a: 'Annoyed (often by flies, sometimes by the rider)', opts: ['Annoyed (often by flies, sometimes by the rider)', 'Happy', 'Hungry', 'Trying to balance'] },
+  { c: 'BEHAVIOR', e: '😴', q: 'A horse standing with one hind hoof "cocked" (resting on its toe) is?', a: 'Relaxed and resting', opts: ['Relaxed and resting', 'Lame', 'Stretching', 'Frightened'] },
+
+  // ===== CARE (8) =====
+  { c: 'CARE', e: '🐴', q: 'How often should a horse\'s hooves typically be trimmed?', a: 'Every 6–8 weeks', opts: ['Every 6–8 weeks', 'Once a year', 'Every two days', 'Every six months'] },
+  { c: 'CARE', e: '🔨', q: 'The professional who trims and shoes hooves is called a?', a: 'Farrier', opts: ['Farrier', 'Vet', 'Groom', 'Stable hand'] },
+  { c: 'CARE', e: '🦷', q: 'Horse teeth grow throughout life and need periodic?', a: 'Filing (called "floating")', opts: ['Filing (called "floating")', 'Replacing', 'Whitening', 'Capping'] },
+  { c: 'CARE', e: '👃', q: 'Horses are obligate?', a: 'Nasal breathers (they cannot breathe through their mouth)', opts: ['Nasal breathers (they cannot breathe through their mouth)', 'Mouth breathers', 'Both equally', 'Tracheal breathers'] },
+  { c: 'CARE', e: '🤰', q: 'How long does a mare\'s pregnancy last?', a: 'About 11 months (340 days)', opts: ['About 11 months (340 days)', '6 months', '4 months', '14 months'] },
+  { c: 'CARE', e: '🚫', q: 'Which of these foods is dangerous for horses?', a: 'Chocolate', opts: ['Chocolate', 'Apples', 'Carrots', 'Peppermints'] },
+  { c: 'CARE', e: '😴', q: 'How much sleep does an adult horse need per 24 hours?', a: 'Only about 3 hours, often standing up', opts: ['Only about 3 hours, often standing up', '12 hours like a dog', '8 hours like a human', '20 hours'] },
+  { c: 'CARE', e: '🍎', q: 'Roughly how much can a horse drink on a hot day?', a: '25–55 liters', opts: ['25–55 liters', '5 liters', 'Over 100 liters', '1 liter'] },
+
+  // ===== VOCABULARY (8) =====
+  { c: 'VOCABULARY', e: '🐴', q: 'A baby horse under one year old is called a?', a: 'Foal', opts: ['Foal', 'Calf', 'Cub', 'Kid'] },
+  { c: 'VOCABULARY', e: '🐴', q: 'A young female horse under four years old is a?', a: 'Filly', opts: ['Filly', 'Colt', 'Mare', 'Foal'] },
+  { c: 'VOCABULARY', e: '🐎', q: 'A young male horse under four years old is a?', a: 'Colt', opts: ['Colt', 'Filly', 'Stallion', 'Foal'] },
+  { c: 'VOCABULARY', e: '🐎', q: 'An intact adult male horse is a?', a: 'Stallion', opts: ['Stallion', 'Gelding', 'Colt', 'Mustang'] },
+  { c: 'VOCABULARY', e: '🐎', q: 'A castrated male horse is a?', a: 'Gelding', opts: ['Gelding', 'Mare', 'Colt', 'Stallion'] },
+  { c: 'VOCABULARY', e: '🐎', q: 'An adult female horse is a?', a: 'Mare', opts: ['Mare', 'Filly', 'Stallion', 'Doe'] },
+  { c: 'VOCABULARY', e: '✋', q: 'A "hand" — the unit horses are measured in — equals?', a: '4 inches (10.16 cm)', opts: ['4 inches (10.16 cm)', '2 inches', '6 inches', '10 inches'] },
+  { c: 'VOCABULARY', e: '🐎', q: 'A group of horses is called a?', a: 'Herd', opts: ['Herd', 'Pack', 'Flock', 'Pod'] },
+
+  // ===== HISTORY & FAMOUS (10) =====
+  { c: 'FAMOUS HORSES', e: '🏛️', q: 'Alexander the Great\'s legendary warhorse was named?', a: 'Bucephalus', opts: ['Bucephalus', 'Pegasus', 'Sleipnir', 'Trigger'] },
+  { c: 'FAMOUS HORSES', e: '🏆', q: 'The 1973 American Triple Crown winner who set still-standing race records was?', a: 'Secretariat', opts: ['Secretariat', 'Man o\' War', 'Seabiscuit', 'American Pharoah'] },
+  { c: 'FAMOUS HORSES', e: '⚔️', q: 'The 8-legged horse from Norse mythology, ridden by Odin, is?', a: 'Sleipnir', opts: ['Sleipnir', 'Pegasus', 'Bucephalus', 'Epona'] },
+  { c: 'FAMOUS HORSES', e: '🦄', q: 'The winged horse of Greek mythology is?', a: 'Pegasus', opts: ['Pegasus', 'Sleipnir', 'Centaur', 'Hippogriff'] },
+  { c: 'FAMOUS HORSES', e: '🤠', q: 'The famous horse of cowboy actor Roy Rogers was?', a: 'Trigger', opts: ['Trigger', 'Silver', 'Champion', 'Buttermilk'] },
+  { c: 'FAMOUS HORSES', e: '📖', q: 'Who wrote the classic novel "Black Beauty"?', a: 'Anna Sewell', opts: ['Anna Sewell', 'Mark Twain', 'Beatrix Potter', 'Jack London'] },
+  { c: 'HISTORY', e: '📜', q: 'Horses were first domesticated about how long ago?', a: 'About 6,000 years ago', opts: ['About 6,000 years ago', '500 years ago', '50,000 years ago', '1,000 years ago'] },
+  { c: 'HISTORY', e: '📜', q: 'Where did horse domestication most likely begin?', a: 'The Eurasian steppes (modern Kazakhstan)', opts: ['The Eurasian steppes (modern Kazakhstan)', 'Egypt', 'Mongolia', 'North America'] },
+  { c: 'HISTORY', e: '📬', q: 'The "Pony Express" of 1860–1861 was a?', a: 'Mail delivery service across the American West', opts: ['Mail delivery service across the American West', 'A racing circuit', 'A type of pony breed', 'A military unit'] },
+  { c: 'HISTORY', e: '🏆', q: 'The three Olympic equestrian disciplines are?', a: 'Dressage, Showjumping, and Eventing', opts: ['Dressage, Showjumping, and Eventing', 'Polo, Racing, and Dressage', 'Vaulting, Driving, and Reining', 'Endurance, Racing, and Jumping'] }
+];
+
+/* ============================================================
+   FUN FACTS (55+)
+   ============================================================ */
+const FUN_FACTS = [
+  { icon: '👁️', cat: 'EYE OF THE HORSE', text: 'A horse\'s eye is the largest of any land mammal — bigger than an elephant\'s. The horizontal pupil shape gives them a panoramic field of view of nearly 350°, with two small blind spots: directly in front of the nose and directly behind the tail.' },
+  { icon: '😴', cat: 'SLEEP', text: 'A "stay apparatus" of locking ligaments and tendons lets horses doze standing up without falling. They only need 2–3 hours of sleep per 24 hours, but for true REM sleep they have to lie down — usually about 30 to 60 minutes daily, often in short stretches.' },
+  { icon: '🐎', cat: 'NEWBORNS', text: 'A foal is up on its own legs within 1–2 hours of birth and trotting alongside its mother within a day. Foal legs at birth are already 80–90% of their full adult length.' },
+  { icon: '👂', cat: 'EARS', text: 'Each horse ear has 16 muscles and rotates a full 180°. Ears are direct windows into mood — pricked forward (interest), one rotated back (listening to rider), pinned flat (anger). Watching the ears is the first lesson of any rider.' },
+  { icon: '🏆', cat: 'SECRETARIAT', text: 'Secretariat won the 1973 Belmont Stakes by 31 lengths — a record never broken. After death his heart was found to be 22 pounds (10 kg), about 2.5× the average horse heart, which explains his extraordinary stamina.' },
+  { icon: '✨', cat: 'METALLIC COAT', text: 'The Akhal-Teke\'s shimmering coat comes from hair shafts with an unusually thin transparent core. Light penetrates the hair, refracts off internal pigment, and bounces back out — creating a true metallic gleam, not a coating or chemical effect.' },
+  { icon: '💕', cat: 'HORSE FRIENDSHIPS', text: 'Horses form lifelong best-friend bonds. Pairs graze together, stand head-to-tail to swat each other\'s flies, and whinny when separated. Studies show horses can recognize the photograph of a horse they have not seen in years.' },
+  { icon: '🦄', cat: 'UNICORN ORIGINS', text: 'The unicorn legend is mostly built from sightings of side-view oryx antelopes (where one horn hides the other) and from real white horses with extraordinary forelocks. Marco Polo "saw" unicorns and was actually describing rhinoceroses.' },
+  { icon: '🎂', cat: 'AGEING BY TEETH', text: 'You can roughly age a horse by examining its teeth — angle, wear pattern, and the appearance of "Galvayne\'s groove" all change over time. The phrase "don\'t look a gift horse in the mouth" warns against checking a present\'s value (its age).' },
+  { icon: '🍎', cat: 'TASTES & POISONS', text: 'Horses love apples, carrots, sugar cubes, and peppermints. They cannot have chocolate, avocado, onions, garlic, tomatoes, persimmons, or fresh lawn clippings — all can cause serious harm or even kill.' },
+  { icon: '💨', cat: 'TOP SPEED', text: 'The fastest officially recorded horse speed is 70.76 km/h (43.97 mph) by a Thoroughbred named Winning Brew over two furlongs (2010). Quarter Horses can hit 88 km/h (55 mph) over a quarter mile — the fastest sprint of any horse breed.' },
+  { icon: '🐴', cat: 'FACE RECOGNITION', text: 'Horses recognize specific human faces from photographs — and they remember whether that face had been kind or unkind years earlier. Researchers tested this with 28 horses and the results were striking.' },
+  { icon: '👃', cat: 'OBLIGATE NOSE BREATHERS', text: 'A horse can only breathe through its nostrils — never through its mouth. The flap at the back of the throat (epiglottis) seals the mouth off entirely. That\'s why galloping horses\' nostrils flare so dramatically.' },
+  { icon: '🦷', cat: 'EVER-GROWING TEETH', text: 'Horse teeth grow continuously throughout life, slowly worn down by chewing tough grass and hay. When wear is uneven, the teeth need a vet to "float" them — file off sharp edges with a special rasp.' },
+  { icon: '🌙', cat: 'NIGHT VISION', text: 'Horses see significantly better than humans in low light — perfect for dawn and dusk grazing. They have a tapetum lucidum (the same reflective layer as cats), but they need longer than humans to adjust between bright and dark, which is why a horse may balk at entering a dim trailer.' },
+  { icon: '🎵', cat: 'MUSIC EFFECTS', text: 'Studies of horses in stables show classical and country music lower their heart rate; jazz and rock noticeably stress them. Some yards now play classical music during stall rest.' },
+  { icon: '👑', cat: 'QUEEN ELIZABETH II', text: 'Queen Elizabeth II rode regularly until age 95, three years before her death. She bred Thoroughbreds, owned over 100 horses across her reign, and her racing colors won 1,795 races as an owner. Her last public riding was at age 96 on her pony Emma.' },
+  { icon: '🏜️', cat: 'DESERT ENGINEERING', text: 'Arabians evolved features for the desert: very large nostrils for cooling air intake, a smaller stomach so they can survive on sparse food, dense bone, and the legendary ability to drink less water than other breeds. Bedouins called them "drinkers of the wind."' },
+  { icon: '🌍', cat: 'GLOBAL POPULATION', text: 'There are about 60 million horses worldwide. The countries with the largest populations are the United States (~7 million), Mexico, Brazil, China, and Mongolia. Antarctica is the only continent without horses.' },
+  { icon: '🐎', cat: 'HEART POWER', text: 'A horse\'s heart weighs roughly 4 kg (about 9 lb) — about 1% of body weight. At gallop, it can pump 240 liters of blood per minute. Endurance breeds typically have larger hearts; Secretariat\'s was an outlier at over 10 kg.' },
+  { icon: '🧠', cat: 'LONG MEMORIES', text: 'Horses have outstanding long-term memory. They remember individuals (humans or horses), places, routes, and difficult lessons for over 10 years — often a lifetime. Bad first experiences are notoriously hard to undo.' },
+  { icon: '🛁', cat: 'DUST BATHS', text: 'A horse rolling in dirt or mud is having a bath, not getting dirty. Rolling helps shed loose hair, scratches itches, dries sweat, and leaves a coating that protects against insects. A pasture full of "rolling holes" is a happy pasture.' },
+  { icon: '🎯', cat: 'HOOF CARE', text: 'Hooves grow about 1 cm per month and need farrier visits every 6–8 weeks. The hoof wall is keratin (like a fingernail) and contains no nerves; that\'s why nailing on a horseshoe is painless when done correctly.' },
+  { icon: '💪', cat: 'PONY POWER', text: 'A Shetland Pony stands under 1.07 m (under 11 hh) but can pull twice its body weight — proportionally the strongest horse. They worked British coal mines into the 1990s, hauling carts in galleries too low for full-sized horses.' },
+  { icon: '🌈', cat: 'COAT VOCABULARY', text: 'Horse coat names are a vocabulary of their own: bay (brown body, black points), chestnut (red-brown all over), palomino (gold body, white mane), roan (white sprinkled), grullo (smoky gray), buckskin (cream with black points), perlino, dun, cremello, sabino, leopard...' },
+  { icon: '⚔️', cat: 'BUCEPHALUS', text: 'Alexander the Great won his legendary warhorse Bucephalus at age 12. Tamers gave up after the black stallion threw everyone. Alexander noticed the horse was spooking at his own shadow, turned him to face the sun, and rode him calmly. Bucephalus carried Alexander to India.' },
+  { icon: '🤝', cat: '5,000 YEARS', text: 'Horses have served humans for at least 5,500 years — pulling chariots, carrying soldiers, ploughing, racing, jumping, herding cattle, delivering mail, harnessing power before engines, and now in therapy and Olympic sport.' },
+  { icon: '😊', cat: 'CONTENT HORSE', text: 'A truly relaxed horse will lower its head, soften its eye, sigh deeply, lick its lips, and rest one hind hoof. The lower lip may droop. If you see all of these together, the horse is genuinely content.' },
+  { icon: '🐎', cat: 'ZODIAC', text: 'The Horse is the seventh sign of the Chinese zodiac. People born in the Year of the Horse are said to be energetic, independent, and quick-witted. The most recent Horse years were 2002, 2014, and 2026.' },
+  { icon: '🤰', cat: 'GESTATION', text: 'Mares carry their foals for an average of 340 days (11 months), longer than humans. Twin foals are extremely rare — only 1 in 10,000 pregnancies — and risky enough that vets often manage one twin to give the other a chance.' },
+  { icon: '🧬', cat: 'PRZEWALSKI\'S HORSE', text: 'Przewalski\'s Horse — small, stocky, dun-colored — is the only horse on earth never domesticated. It went extinct in the wild in 1969. Successful captive breeding from 13 founders has reintroduced wild herds to the Mongolian steppe.' },
+  { icon: '👴', cat: 'OLDEST HORSE', text: 'The oldest verified horse was Old Billy, an English barge horse who lived from 1760 to 1822 — 62 years. Most horses live 25–30 years; some ponies reach 40. The oldest pony, Sugar Puff, lived to 56.' },
+  { icon: '🐎', cat: 'BIGGEST HORSE EVER', text: 'A Shire stallion named Sampson (foaled 1846) stood 21.2½ hh (2.20 m / 7\'2½") at the withers and weighed 1,524 kg (3,360 lb). He was later renamed "Mammoth" and remains the tallest and heaviest horse ever recorded.' },
+  { icon: '🐴', cat: 'SMALLEST HORSE', text: 'The smallest horse on record was Thumbelina, a dwarf miniature horse just 43 cm (17 inches) tall and weighing 26 kg (57 lb). She lived in Missouri and was a recognized therapy horse.' },
+  { icon: '🚫', cat: 'NO VOMITING', text: 'Horses physically cannot vomit. The cardiac sphincter at the top of their stomach is one-way only. Combined with their extremely long, narrow intestine, this is why colic is such a dangerous condition — anything wrong with digestion has nowhere to go.' },
+  { icon: '⚙️', cat: 'WHERE "HORSEPOWER" CAME FROM', text: 'James Watt coined the term "horsepower" in the 1780s to compare his steam engines to draft horses. He calculated that a strong workhorse could pull 33,000 foot-pounds of force per minute. One horsepower equals 745.7 watts. A real horse can briefly produce up to 15 hp.' },
+  { icon: '🌊', cat: 'HORSE LATITUDES', text: 'The "horse latitudes" — calm regions around 30°N and 30°S — got the name because Spanish ships becalmed there allegedly threw horses overboard to ration drinking water. Sailors called them "Golfo de las Yeguas" — Gulf of the Mares.' },
+  { icon: '🎠', cat: 'TROJAN HORSE', text: 'According to legend, the Trojan Horse — a giant wooden horse hiding Greek soldiers — ended the 10-year siege of Troy around 1180 BCE. Most historians treat the story as poetic invention, but Greek geographer Pausanias wrote that the "horse" was actually a battering ram shaped like a horse.' },
+  { icon: '🔧', cat: 'HORSESHOES', text: 'Iron horseshoes have been nailed onto hooves for over 1,000 years. The hoof wall has no nerves, so nailing is painless when done right. A traditional shoe has 7 holes; the placement of those nails takes years of farrier training.' },
+  { icon: '🇲🇳', cat: 'MONGOL DERBY', text: 'The Mongol Derby is the world\'s longest horse race: 1,000 km across the Mongolian steppe, with riders changing horses every 40 km from a string of 1,400 semi-wild Mongolian horses. It typically takes 7–10 days and recreates Genghis Khan\'s mounted messenger system.' },
+  { icon: '📬', cat: 'PONY EXPRESS', text: 'The 1860–1861 Pony Express used 184 stations, 80 riders, and 400+ horses to deliver mail 3,200 km from Missouri to California in just 10 days. Rider Bill Cody (later Buffalo Bill) was 14 years old when he started.' },
+  { icon: '🦄', cat: 'WHITE FROM GREY', text: 'Most "white" horses (Lipizzans, many Andalusians, Camargues) are actually genetically grey, not white. They\'re born dark and gradually turn white over years as the dark hair is replaced by white. True genetically white horses (with pink skin) are extremely rare.' },
+  { icon: '🐎', cat: 'GAITED HORSES', text: 'Some breeds have a fifth or sixth gait beyond walk-trot-canter-gallop: the Icelandic Horse has the four-beat tölt and the lateral two-beat skeið; the Tennessee Walker has the running walk; the Paso Fino has the paso. All are smooth, ground-covering ambling gaits.' },
+  { icon: '👨‍⚕️', cat: 'EQUINE THERAPY', text: 'Therapeutic riding and "equine-assisted therapy" use the horse\'s rhythmic movement and emotional sensitivity to help people with autism, PTSD, anxiety, cerebral palsy, depression, and grief. The horse mirrors emotions back, and the gentle bond often opens children who don\'t respond to people.' },
+  { icon: '🌾', cat: 'DIET', text: 'A horse\'s diet should be 1.5–2.5% of body weight daily in forage (hay or grass) — that\'s 7–12 kg per day for a 500 kg horse. Concentrates (grain, pellets) are added only if the workload demands it. Constant access to fresh water is essential.' },
+  { icon: '🦓', cat: 'EQUUS FAMILY', text: 'Horses, donkeys, zebras, and onagers all belong to the genus Equus. They can interbreed: a horse × donkey makes a mule (very common); a horse × zebra makes a zorse; a donkey × zebra makes a zonkey. Most hybrids are sterile.' },
+  { icon: '🏁', cat: 'TRIPLE CROWN RARITY', text: 'Only 13 horses have won the U.S. Triple Crown (Kentucky Derby, Preakness, Belmont) since 1919. After Affirmed in 1978, there was a 37-year drought before American Pharoah won in 2015. Justify won most recently in 2018 — undefeated.' },
+  { icon: '🐎', cat: 'WHITE BLAZE GENES', text: 'Face markings (star, snip, blaze) and leg markings (sock, stocking) are caused by genes that suppress pigment in those areas during fetal development. Markings are usually established by birth and rarely change.' },
+  { icon: '🍀', cat: 'GOOD LUCK SHOES', text: 'Horseshoes have been considered lucky for centuries. Tradition says a shoe should be hung points-up to "hold the luck in" — though some hang them points-down so luck "spills onto" people walking under. Found shoes are luckiest.' },
+  { icon: '🔍', cat: 'PRZEWALSKI\'S CHROMOSOMES', text: 'Most horses have 64 chromosomes; Przewalski\'s Horse has 66. They can interbreed with regular horses and produce fertile offspring (which inherit 65). It is the only difference of its kind among the equids.' },
+  { icon: '🐴', cat: 'COMMUNICATION REPERTOIRE', text: 'Horses communicate through a rich repertoire: whinny (long-distance call), nicker (close greeting, often to food/foals), squeal (mares meeting), snort (alarm/relaxation), groan (effort), blow (relaxation). Combined with body language, they have hundreds of distinct expressions.' },
+  { icon: '🐎', cat: 'GRAY GOES WHITE', text: 'A gray horse has a single dominant gene (G) that progressively replaces dark hair with white. Foals are born any color; by year 2–4 the body greys; by 6–10 the horse looks white. Skin and eyes always stay dark — that\'s how you know it\'s gray, not white.' },
+  { icon: '💧', cat: 'SWEAT', text: 'Horses sweat heavily — they\'re among the few animals that thermoregulate by sweating like humans (and not just from a few glands). Their sweat contains a unique protein, latherin, that creates the white foam often seen between the legs of working horses.' },
+  { icon: '🐎', cat: 'COLOR VISION', text: 'Horses see the world in dichromatic color: they see yellows and blues clearly but red and green look similar (much like red-green colorblind humans). That\'s why showjumping fences are typically painted in high-contrast colors against the green field.' },
+  { icon: '🇫🇷', cat: 'CAMARGUE', text: 'In the Rhône delta of southern France, white Camargue horses live semi-wild in the marshes. Born dark like Lipizzans, they whiten with age. Local "gardians" (cowboys) ride them to herd the famous black Camargue bulls.' },
+  { icon: '🤺', cat: 'HAUTE ÉCOLE', text: 'The "haute école" (high school) movements of classical dressage — levade, capriole, courbette, ballotade — were developed by medieval cavalry to disable foot soldiers in battle. Today only the Spanish Riding School of Vienna and the Cadre Noir in France perform them.' },
+  { icon: '🍯', cat: 'AIRAG', text: 'In Mongolia, fermented mare\'s milk — airag (also called kumis) — is a national drink, mildly alcoholic and slightly fizzy. A milking mare gives about 1.5 liters at a session, milked up to 6 times a day during summer.' },
+  { icon: '🐎', cat: 'IMPRINT TRAINING', text: 'Foals can be "imprint-trained" in the first hours of life — handled gently, touched everywhere, exposed to sounds and objects. Properly imprinted foals become unflappable adults. Done badly it can damage the foal\'s confidence.' },
+  { icon: '🇪🇸', cat: 'BULLFIGHTING HORSES', text: 'Spanish bullfighting on horseback (rejoneo) uses Lusitanos and Andalusians trained for years in Iberian Doma. The horse must perform precise dressage while a fighting bull is meters away — extraordinary trust and obedience under terror.' }
+];
+
+/* ============================================================
+   STATE & UI
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+const SCREENS = ['startScreen', 'exploreGrid', 'exploreDetail', 'quizScreen', 'resultScreen', 'factScreen'];
+
+const QUIZ_LEN = 15;
+
+const state = {
+  detailIdx: 0,
+  quiz: { questions: [], idx: 0, score: 0, locked: false, rights: [] },
+  fact: { idx: 0, pool: [] }
+};
+
+function show(id){
+  SCREENS.forEach(s => $(s).classList.add('hidden'));
+  $(id).classList.remove('hidden');
+  $('homeBtn').classList.toggle('show', id !== 'startScreen');
+  window.scrollTo(0, 0);
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/* start screen bindings */
+document.querySelectorAll('.mode-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    const mode = b.dataset.mode;
+    if (mode === 'explore') openExplore();
+    else if (mode === 'quiz') startQuiz();
+    else if (mode === 'facts') startFacts();
+  });
+});
+$('homeBtn').addEventListener('click', goHome);
+function goHome(){ show('startScreen'); }
+
+/* ============================================================
+   EXPLORE
+   ============================================================ */
+function openExplore(){ buildBreedGrid(); show('exploreGrid'); }
+
+function buildBreedGrid(){
+  const grid = $('breedGrid');
+  grid.innerHTML = '';
+  BREEDS.forEach((b, i) => {
+    const tile = document.createElement('div');
+    tile.className = 'breed-tile';
+    tile.innerHTML = `
+      <div class="breed-portrait" style="--breed-grad: ${b.grad}; background: ${b.grad}">${b.emoji}</div>
+      <h3>${b.name}</h3>
+      <div class="origin">${b.origin}</div>
+    `;
+    tile.addEventListener('click', () => openDetail(i));
+    grid.appendChild(tile);
+  });
+}
+
+function openDetail(i){
+  state.detailIdx = i;
+  const b = BREEDS[i];
+  const card = $('detailCard');
+  card.innerHTML = `
+    <div class="detail-portrait" style="background: ${b.grad}">${b.emoji}</div>
+    <h2>${b.name}</h2>
+    <div class="breed-tag">~ ${b.origin} ~</div>
+    <div class="fact-grid">
+      <div class="fact"><div class="label">History</div><div class="value">${b.age}</div></div>
+      <div class="fact"><div class="label">Height</div><div class="value">${b.height}</div></div>
+      <div class="fact"><div class="label">Coat</div><div class="value">${b.coat}</div></div>
+      <div class="fact"><div class="label">Temperament</div><div class="value">${b.temper}</div></div>
+      <div class="fact" style="grid-column: 1 / -1;"><div class="label">Famous For</div><div class="value">${b.famous}</div></div>
+    </div>
+    <div class="fun-fact">
+      <strong>DID YOU KNOW</strong>
+      ${b.funFact}
+    </div>
+    <div class="nav-row">
+      <button class="nav-btn ghost" id="prevBreedBtn">◀ Prev</button>
+      <button class="nav-btn ghost" id="backToGridBtn">All Horses</button>
+      <button class="nav-btn" id="nextBreedBtn">Next ▶</button>
+    </div>
+  `;
+  $('prevBreedBtn').onclick = () => { state.detailIdx = (state.detailIdx - 1 + BREEDS.length) % BREEDS.length; openDetail(state.detailIdx); };
+  $('nextBreedBtn').onclick = () => { state.detailIdx = (state.detailIdx + 1) % BREEDS.length; openDetail(state.detailIdx); };
+  $('backToGridBtn').onclick = () => show('exploreGrid');
+  show('exploreDetail');
+}
+
+/* ============================================================
+   QUIZ
+   ============================================================ */
+function startQuiz(){
+  state.quiz.questions = shuffle(QUIZ_BANK).slice(0, QUIZ_LEN);
+  state.quiz.idx = 0;
+  state.quiz.score = 0;
+  state.quiz.locked = false;
+  state.quiz.rights = new Array(QUIZ_LEN).fill(null);
+
+  const prog = $('quizProgress');
+  prog.innerHTML = '';
+  for (let i = 0; i < QUIZ_LEN; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'quiz-dot';
+    prog.appendChild(dot);
+  }
+
+  let best = 0;
+  try { best = parseInt(localStorage.getItem('horsequest_best') || '0', 10); } catch(e){}
+  $('qBest').textContent = best > 0 ? `BEST ${best}/${QUIZ_LEN}` : 'BEST —';
+  $('qScoreL').textContent = 'SCORE 0';
+
+  show('quizScreen');
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const q = state.quiz.questions[state.quiz.idx];
+  $('qEmoji').textContent = q.e;
+  $('qCat').textContent = `${q.c} · QUESTION ${state.quiz.idx + 1} OF ${QUIZ_LEN}`;
+  $('qText').textContent = q.q;
+  $('qFeedback').textContent = ' ';
+  $('qFeedback').className = 'feedback';
+
+  document.querySelectorAll('.quiz-dot').forEach((d, i) => {
+    d.classList.remove('active');
+    if (i === state.quiz.idx) d.classList.add('active');
+  });
+
+  const opts = $('qOptions');
+  opts.innerHTML = '';
+  shuffle(q.opts).forEach(opt => {
+    const b = document.createElement('button');
+    b.className = 'option';
+    b.textContent = opt;
+    b.addEventListener('click', () => answerQuiz(b, opt));
+    opts.appendChild(b);
+  });
+  state.quiz.locked = false;
+}
+
+const CHEERS = [
+  'Spot on.', 'Galloping along.', 'Clean round.', 'On the bit.', 'Right rein.',
+  'Solid jump.', 'Quick eye.', 'Strong ride.', 'Right lead.', 'Square halt.',
+  'Forward and through.', 'Smooth transition.', 'Eyes up — well ridden.'
+];
+function randomCheer(){ return CHEERS[Math.floor(Math.random()*CHEERS.length)]; }
+
+function answerQuiz(btn, choice){
+  if (state.quiz.locked) return;
+  state.quiz.locked = true;
+  const q = state.quiz.questions[state.quiz.idx];
+  const correct = choice === q.a;
+  document.querySelectorAll('.option').forEach(b => b.disabled = true);
+
+  const dots = document.querySelectorAll('.quiz-dot');
+  if (correct){
+    btn.classList.add('right');
+    state.quiz.score += 1;
+    state.quiz.rights[state.quiz.idx] = 'right';
+    dots[state.quiz.idx].classList.add('right');
+    $('qScoreL').textContent = `SCORE ${state.quiz.score}`;
+    setFeedback(`Correct. ${randomCheer()}`, true);
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.option').forEach(b => {
+      if (b.textContent === q.a) b.classList.add('right');
+    });
+    state.quiz.rights[state.quiz.idx] = 'wrong';
+    dots[state.quiz.idx].classList.add('wrong');
+    setFeedback(`Wrong. The answer is "${q.a}".`, false);
+  }
+  setTimeout(() => {
+    state.quiz.idx += 1;
+    if (state.quiz.idx >= QUIZ_LEN) endQuiz();
+    else renderQuestion();
+  }, correct ? 1200 : 2300);
+}
+
+function setFeedback(msg, ok){
+  const el = $('qFeedback');
+  el.textContent = msg;
+  el.className = 'feedback ' + (ok ? 'right' : 'wrong');
+}
+
+function endQuiz(){
+  const score = state.quiz.score;
+  const pct = (score / QUIZ_LEN) * 100;
+  let trophy, rank, msg;
+  if (pct === 100) {
+    trophy = '🏆'; rank = 'GRAND CHAMPION';
+    msg = 'Perfect round. Every question — clean. You have the breeds, the anatomy, the tack, and the lore. Genuine mastery.';
+  } else if (pct >= 80) {
+    trophy = '🥇'; rank = 'CHAMPION';
+    msg = 'Strong showing. You know your way around the stable yard, the arena, and the textbook. A real equestrian.';
+  } else if (pct >= 60) {
+    trophy = '🥈'; rank = 'OPEN COMPETITOR';
+    msg = 'Solid round. Foundations are in place. Another lap through the breeds and a few more questions and you\'ll be in the ribbons.';
+  } else if (pct >= 40) {
+    trophy = '🥉'; rank = 'NOVICE RIDER';
+    msg = 'Decent ride. There\'s more to learn — head into the Breeds section for the depth, then come back for another round.';
+  } else {
+    trophy = '🐴'; rank = 'STABLE HAND';
+    msg = 'Every rider was a beginner once. Spend time in Breeds and Fun Facts and the next quiz will go very differently.';
+  }
+  $('trophyIcon').textContent = trophy;
+  $('scoreDisplay').textContent = `${score} / ${QUIZ_LEN}`;
+  $('rankText').textContent = rank;
+  $('resultMsg').textContent = msg;
+
+  let best = 0;
+  try { best = parseInt(localStorage.getItem('horsequest_best') || '0', 10); } catch(e){}
+  if (score > best) {
+    try { localStorage.setItem('horsequest_best', String(score)); } catch(e){}
+    $('bestMsg').textContent = '★  NEW PERSONAL BEST  ★';
+  } else if (best > 0) {
+    $('bestMsg').textContent = `Best so far: ${best}/${QUIZ_LEN}`;
+  } else {
+    $('bestMsg').textContent = '';
+  }
+  show('resultScreen');
+}
+
+$('quizAgainBtn').addEventListener('click', startQuiz);
+$('resultMenuBtn').addEventListener('click', goHome);
+
+/* ============================================================
+   FACTS
+   ============================================================ */
+function startFacts(){
+  state.fact.pool = shuffle(FUN_FACTS.slice());
+  state.fact.idx = 0;
+  renderFact();
+  show('factScreen');
+}
+function renderFact(){
+  const f = state.fact.pool[state.fact.idx];
+  $('fcIcon').textContent = f.icon;
+  $('fcCat').textContent = f.cat;
+  $('fcText').textContent = f.text;
+  $('factCounter').textContent = `${state.fact.idx + 1} of ${state.fact.pool.length}`;
+}
+$('nextFactBtn').addEventListener('click', () => {
+  state.fact.idx = (state.fact.idx + 1) % state.fact.pool.length;
+  renderFact();
+});
+$('prevFactBtn').addEventListener('click', () => {
+  state.fact.idx = (state.fact.idx - 1 + state.fact.pool.length) % state.fact.pool.length;
+  renderFact();
+});
+$('factMenuBtn').addEventListener('click', goHome);
+
+/* boot */
+show('startScreen');
+</script>
+</body>
+</html>
