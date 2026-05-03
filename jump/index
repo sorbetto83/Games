@@ -1,1 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Math Quest</title>
+<style>
+  :root {
+    --bg-deep: #0a0e27;
+    --bg-mid: #1a1f4e;
+    --accent: #4ee2ec;
+    --accent-2: #b46cff;
+    --warn: #ff5b6e;
+    --gold: #ffd95b;
+    --text: #f0f4ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; width: 100%;
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+  }
+  #wrap {
+    display: flex; align-items: center; justify-content: center;
+    width: 100vw; height: 100vh;
+  }
+  canvas {
+    background: linear-gradient(180deg, #0a0e27 0%, #1a1f4e 70%, #2c3173 100%);
+    border-radius: 12px;
+    box-shadow: 0 0 40px rgba(78, 226, 236, 0.3);
+    max-width: 100%; max-height: 100%;
+  }
+  #overlay {
+    position: absolute; inset: 0; display: flex;
+    align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .panel {
+    pointer-events: auto;
+    background: rgba(10, 14, 39, 0.92);
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: 32px 40px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(78, 226, 236, 0.4);
+    max-width: 90%;
+  }
+  .panel h1 { font-size: 2.4em; color: var(--accent); margin-bottom: 12px; letter-spacing: 1px; }
+  .panel h2 { font-size: 1.6em; color: var(--gold); margin-bottom: 16px; }
+  .panel p { margin: 8px 0; line-height: 1.5; }
+  .panel .small { font-size: 0.85em; opacity: 0.75; }
+  .btn {
+    display: inline-block; margin: 8px 6px;
+    padding: 10px 22px;
+    background: var(--accent);
+    color: var(--bg-deep);
+    border: none; border-radius: 8px;
+    font-size: 1.1em; font-weight: 700;
+    cursor: pointer; transition: transform 0.1s, background 0.1s;
+  }
+  .btn:hover { transform: scale(1.06); background: var(--accent-2); color: white; }
+  .btn.selected { background: var(--accent-2); color: white; }
+  .gate-input {
+    font-size: 2.2em; padding: 8px 16px;
+    background: var(--bg-mid); color: var(--gold);
+    border: 2px solid var(--gold); border-radius: 8px;
+    margin: 12px 0; min-width: 120px; text-align: center;
+    letter-spacing: 4px; font-weight: 700;
+  }
+  .controls-hint { font-size: 0.85em; opacity: 0.7; margin-top: 16px; }
+  .btn.home {
+    position: fixed; top: 14px; left: 14px; z-index: 10;
+    background: rgba(10,14,39,0.85); color: var(--gold);
+    border: 1px solid var(--gold);
+  }
+  .btn.home:hover { background: var(--gold); color: #0a0e27; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="960" height="540"></canvas>
+  <button class="btn home hidden" id="homeBtn">🏠 MENU</button>
+  <div id="overlay">
+    <!-- Start screen -->
+    <div class="panel" id="startPanel">
+      <h1>🚀 MATH QUEST</h1>
+      <p>Run, jump, and solve math to power up the energy gates.</p>
+      <p style="margin-top:18px;"><strong>Choose your difficulty:</strong></p>
+      <div id="diffButtons">
+        <button class="btn" data-diff="easy">EASY (+ −)</button>
+        <button class="btn selected" data-diff="medium">MEDIUM (+ − ×)</button>
+        <button class="btn" data-diff="hard">HARD (+ − × ÷)</button>
+      </div>
+      <p style="margin-top:14px;"><strong>Theme:</strong></p>
+      <div id="themeButtons">
+        <button class="btn selected" data-theme="space">🚀 Space</button>
+        <button class="btn" data-theme="jungle">🌴 Jungle</button>
+        <button class="btn" data-theme="ice">❄️ Ice</button>
+      </div>
+      <p style="margin-top:18px;"><button class="btn" id="startBtn">▶ START</button></p>
+      <p class="controls-hint">
+        Arrows / Space to move & jump · Number keys to answer · Enter to submit · P to pause
+      </p>
+      <p class="small" id="bestScore"></p>
+    </div>
 
+    <!-- Math gate panel -->
+    <div class="panel hidden" id="gatePanel">
+      <h2>⚡ Energy Gate</h2>
+      <p style="font-size:2.2em; color:var(--accent); margin:12px;" id="gateProblem">2 + 2 = ?</p>
+      <div class="gate-input" id="gateAnswer">_</div>
+      <p class="small">Type your answer · Enter to submit · Backspace to erase</p>
+      <p id="gateFeedback" style="margin-top:10px; min-height:1.4em; font-weight:700;"></p>
+    </div>
+
+    <!-- Pause panel -->
+    <div class="panel hidden" id="pausePanel">
+      <h2>⏸ PAUSED</h2>
+      <p>Press <strong>P</strong> to resume</p>
+      <button class="btn" id="pauseHome">🏠 Back to menu</button>
+    </div>
+
+    <!-- Win panel -->
+    <div class="panel hidden" id="winPanel">
+      <h1>🎉 LEVEL COMPLETE!</h1>
+      <p>Score: <strong id="winScore">0</strong></p>
+      <p>Gates cleared: <strong id="winGates">0</strong></p>
+      <button class="btn" id="winRestart">▶ PLAY AGAIN</button>
+      <button class="btn" id="winBackHome">🏠 MENU</button>
+    </div>
+
+    <!-- Lose panel -->
+    <div class="panel hidden" id="losePanel">
+      <h2>💔 Out of hearts</h2>
+      <p>Score: <strong id="loseScore">0</strong></p>
+      <button class="btn" id="loseRestart">↺ TRY AGAIN</button>
+      <button class="btn" id="loseBackHome">🏠 MENU</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+// ============================================================
+// MATH QUEST — single-file 2D platformer with arithmetic gates
+// ============================================================
+
+const cvs = document.getElementById('game');
+const ctx = cvs.getContext('2d');
+
+const W = cvs.width;
+const H = cvs.height;
+
+// ---------------- Game state ----------------
+const STATE = { START: 0, PLAYING: 1, GATE: 2, PAUSED: 3, WIN: 4, LOSE: 5 };
+let state = STATE.START;
+let difficulty = 'medium';
+let theme = 'space';
+
+// Theme palettes — affect background only (gameplay unchanged)
+const THEMES = {
+  space:  { skyTop:'#0a0e27', skyMid:'#1a1f4e', skyBot:'#2c3173',
+            groundDark:'#3a2c52', groundLight:'#5a448a',
+            platformDark:'#2a3672', platformLight:'#4ee2ec',
+            planet1:'#b46cff', planet2:'#4ee2ec',
+            bgChar:['✦','★','·','⋆'], bgColor:'rgba(255,255,255,0.5)' },
+  jungle: { skyTop:'#103e29', skyMid:'#2e7a4f', skyBot:'#a3e07a',
+            groundDark:'#3b1f10', groundLight:'#5e3520',
+            platformDark:'#7a4a26', platformLight:'#a3692e',
+            planet1:'#ffd95b', planet2:'#ff7a5b',
+            bgChar:['❀','✿','♣','✻'], bgColor:'rgba(255,255,255,0.45)' },
+  ice:    { skyTop:'#08243d', skyMid:'#3d7ab3', skyBot:'#bfe7ff',
+            groundDark:'#284156', groundLight:'#4a6f8f',
+            platformDark:'#3a5f7a', platformLight:'#bfe7ff',
+            planet1:'#e6f4ff', planet2:'#80ecff',
+            bgChar:['❄','❉','❅','✶'], bgColor:'rgba(255,255,255,0.7)' },
+};
+
+const game = {
+  player: null,
+  platforms: [],
+  coins: [],
+  stars: [],
+  gates: [],
+  rocket: null,
+  cameraX: 0,
+  worldWidth: 4800,
+  score: 0,
+  hearts: 3,
+  gatesCleared: 0,
+  currentGate: null,
+  gateInput: '',
+  bgStars: [],
+};
+
+// ---------------- Difficulty config ----------------
+const DIFF = {
+  // Caps tuned so a kid can actually solve them mentally.
+  easy:   { ops: ['+','-'],          max: 10, mulCap: 0,  divCap: 0, hearts: 5, speed: 3.2, name:'EASY' },
+  medium: { ops: ['+','-','*'],      max: 12, mulCap: 5,  divCap: 0, hearts: 4, speed: 4.0, name:'MEDIUM' },
+  hard:   { ops: ['+','-','*','/'],  max: 20, mulCap: 7,  divCap: 6, hearts: 4, speed: 4.0, name:'HARD' },
+};
+
+// ---------------- Math problem generator ----------------
+function makeProblem() {
+  const cfg = DIFF[difficulty];
+  const op = cfg.ops[Math.floor(Math.random() * cfg.ops.length)];
+  let a, b, ans;
+  if (op === '+') {
+    a = rnd(1, cfg.max);
+    b = rnd(1, cfg.max);
+    ans = a + b;
+  } else if (op === '-') {
+    a = rnd(1, cfg.max);
+    b = rnd(0, a); // avoid negatives
+    ans = a - b;
+  } else if (op === '*') {
+    const cap = cfg.mulCap || 5;
+    a = rnd(2, cap);
+    b = rnd(2, cap);
+    ans = a * b;
+  } else if (op === '/') {
+    // Clean division — small operands so the answer is a tidy small number.
+    const cap = cfg.divCap || 6;
+    b = rnd(2, cap);
+    ans = rnd(2, cap);
+    a = b * ans;
+  }
+  return { a, b, op, ans, display: `${a} ${displayOp(op)} ${b} = ?` };
+}
+function displayOp(op){ return op === '*' ? '×' : op === '/' ? '÷' : op; }
+function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+// ---------------- World construction ----------------
+function buildLevel() {
+  const cfg = DIFF[difficulty];
+  game.player = {
+    x: 60, y: H - 160,
+    w: 26, h: 40,             // slightly slimmer hitbox
+    vx: 0, vy: 0,
+    onGround: false,
+    facing: 1,
+    speed: cfg.speed,
+    jumpPower: 13.5,          // a touch higher (was 12.5)
+    invul: 0,
+    coyote: 0,                // frames left where you can still jump after walking off
+    jumpBuffer: 0,            // frames left where a press still counts after pressing in air
+  };
+  game.platforms = [];
+  game.coins = [];
+  game.stars = [];
+  game.gates = [];
+  game.cameraX = 0;
+  game.score = 0;
+  game.hearts = cfg.hearts;
+  game.gatesCleared = 0;
+  game.currentGate = null;
+  game.gateInput = '';
+
+  // Ground tiles + small pits (gaps reduced so jumps are easy)
+  let x = 0;
+  while (x < game.worldWidth) {
+    const segLen = rnd(320, 520);          // wider ground segments
+    game.platforms.push({ x, y: H - 60, w: segLen, h: 60, kind:'ground' });
+    x += segLen;
+    if (x < game.worldWidth - 400) {
+      const pit = rnd(45, 90);             // narrower pits (was 80–160)
+      x += pit;
+    }
+  }
+
+  // Floating platforms — wider and closer together
+  for (let i = 0; i < 14; i++) {
+    const px = 350 + i * 320 + rnd(-40, 40);
+    const py = H - rnd(140, 230);          // less vertical spread (was 150–280)
+    const pw = rnd(140, 220);              // wider (was 90–150)
+    if (px + pw < game.worldWidth - 200) {
+      game.platforms.push({ x: px, y: py, w: pw, h: 18, kind:'float' });
+    }
+  }
+
+  // Coins on floating platforms
+  game.platforms.forEach(p => {
+    if (p.kind === 'float' && Math.random() < 0.85) {
+      const count = rnd(2, 4);
+      for (let i = 0; i < count; i++) {
+        game.coins.push({ x: p.x + 12 + i * 22, y: p.y - 22, taken:false });
+      }
+    }
+  });
+
+  // Stars (rarer, higher value)
+  for (let i = 0; i < 6; i++) {
+    const sx = 600 + i * 700 + rnd(-100, 100);
+    const sy = H - rnd(220, 360);
+    if (sx < game.worldWidth - 300) {
+      game.stars.push({ x: sx, y: sy, taken:false, t:0 });
+    }
+  }
+
+  // Math gates evenly along the level (5 of them)
+  const gateCount = 5;
+  for (let i = 0; i < gateCount; i++) {
+    const gx = 700 + i * (game.worldWidth - 1000) / gateCount;
+    game.gates.push({
+      // Collision box spans the full canvas height — the player cannot jump over it.
+      x: gx, y: 0, w: 50, h: H,
+      // Visual coordinates for rendering the "main" gate body
+      visY: H - 200, visH: 140,
+      problem: makeProblem(),
+      cleared: false,
+    });
+  }
+
+  // Rocket at the end
+  game.rocket = { x: game.worldWidth - 120, y: H - 180, w: 60, h: 120 };
+
+  // Background stars (parallax)
+  game.bgStars = [];
+  for (let i = 0; i < 80; i++) {
+    game.bgStars.push({
+      x: Math.random() * W * 3,
+      y: Math.random() * H * 0.7,
+      r: Math.random() * 1.6 + 0.4,
+      speed: 0.2 + Math.random() * 0.5,
+    });
+  }
+}
+
+// ---------------- Input ----------------
+const keys = {};
+window.addEventListener('keydown', (e) => {
+  if (state === STATE.GATE) {
+    if (e.key >= '0' && e.key <= '9') {
+      if (game.gateInput.length < 4) game.gateInput += e.key;
+      e.preventDefault();
+    } else if (e.key === 'Backspace') {
+      game.gateInput = game.gateInput.slice(0, -1);
+      e.preventDefault();
+    } else if (e.key === 'Enter') {
+      submitGateAnswer();
+      e.preventDefault();
+    }
+    return;
+  }
+  if (e.key === 'Escape') {
+    if (state !== STATE.START) { backToHome(); e.preventDefault(); return; }
+  }
+  if (e.key === 'p' || e.key === 'P') {
+    if (state === STATE.PLAYING) { state = STATE.PAUSED; show('pausePanel'); }
+    else if (state === STATE.PAUSED) { state = STATE.PLAYING; hide('pausePanel'); }
+    e.preventDefault();
+    return;
+  }
+  if (e.key === 'r' || e.key === 'R') {
+    if (state === STATE.PLAYING || state === STATE.PAUSED) {
+      buildLevel();
+      state = STATE.PLAYING;
+      hide('pausePanel');
+    }
+    return;
+  }
+  keys[e.key] = true;
+  if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) e.preventDefault();
+});
+window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+function submitGateAnswer() {
+  if (game.gateInput === '') return;
+  const val = parseInt(game.gateInput, 10);
+  const expected = game.currentGate.problem.ans;
+  const fb = document.getElementById('gateFeedback');
+  if (val === expected) {
+    game.score += 100;
+    game.gatesCleared += 1;
+    game.currentGate.cleared = true;
+    game.currentGate = null;
+    game.gateInput = '';
+    state = STATE.PLAYING;
+    hide('gatePanel');
+    // Nudge the player a small step forward so they don't immediately re-trigger
+    // the (now-cleared) gate's trigger zone — keeps focus moving.
+    if (game.player) game.player.x += 6;
+  } else {
+    // Wrong: gates are MANDATORY but not impossible. We never lose hearts
+    // here — instead we reveal the right answer briefly and roll a fresh
+    // problem so the kid can try again until they get one right.
+    game.score = Math.max(0, game.score - 5);
+    if (fb) {
+      fb.textContent = '❌ ' + game.gateInput + ' — la risposta era ' + expected + '. Prova con questo:';
+      fb.style.color = '#ff5b6e';
+    }
+    game.gateInput = '';
+    // Schedule the new problem so the kid sees the feedback first.
+    setTimeout(() => {
+      if (state !== STATE.GATE || !game.currentGate) return;
+      game.currentGate.problem = makeProblem();
+      document.getElementById('gateProblem').textContent = game.currentGate.problem.display;
+      const fb2 = document.getElementById('gateFeedback');
+      if (fb2) { fb2.textContent = '↻ Nuovo problema. Tu ce la fai!'; fb2.style.color = '#ffd95b'; }
+    }, 1400);
+  }
+}
+
+// ---------------- Update ----------------
+function update() {
+  if (state !== STATE.PLAYING) return;
+
+  const p = game.player;
+
+  // Horizontal movement
+  if (keys['ArrowLeft']) { p.vx = -p.speed; p.facing = -1; }
+  else if (keys['ArrowRight']) { p.vx = p.speed; p.facing = 1; }
+  else { p.vx = 0; }
+
+  // Jump with coyote time + jump buffering (kid-friendly platforming)
+  // Coyote: a few frames of "still on ground" after walking off an edge.
+  if (p.onGround) p.coyote = 8;
+  else if (p.coyote > 0) p.coyote -= 1;
+
+  // Buffer the jump press so an early press still triggers when landing.
+  const wantsJump = (keys[' '] || keys['ArrowUp']);
+  if (wantsJump) p.jumpBuffer = 8;
+  else if (p.jumpBuffer > 0) p.jumpBuffer -= 1;
+
+  if (p.jumpBuffer > 0 && (p.onGround || p.coyote > 0)) {
+    p.vy = -p.jumpPower;
+    p.onGround = false;
+    p.coyote = 0;
+    p.jumpBuffer = 0;
+  }
+
+  // Variable jump height — releasing key cuts the jump short.
+  if (!wantsJump && p.vy < -3) p.vy *= 0.7;
+
+  // Gravity (slightly softer)
+  p.vy += 0.55;
+  if (p.vy > 16) p.vy = 16;
+
+  // Apply velocity with collision
+  p.x += p.vx;
+  resolveX();
+  p.y += p.vy;
+  resolveY();
+
+  // World bounds
+  if (p.x < 0) p.x = 0;
+  if (p.x + p.w > game.worldWidth) p.x = game.worldWidth - p.w;
+  // Fell off the world
+  if (p.y > H + 100) {
+    game.hearts -= 1;
+    if (game.hearts <= 0) {
+      state = STATE.LOSE;
+      document.getElementById('loseScore').textContent = game.score;
+      show('losePanel');
+      saveBest();
+    } else {
+      // respawn near last gate or start
+      p.x = Math.max(60, p.x - 200);
+      p.y = H - 200;
+      p.vy = 0;
+    }
+  }
+
+  // Camera follows player
+  game.cameraX = p.x - W * 0.35;
+  if (game.cameraX < 0) game.cameraX = 0;
+  if (game.cameraX > game.worldWidth - W) game.cameraX = game.worldWidth - W;
+
+  // Coin pickups
+  game.coins.forEach(c => {
+    if (!c.taken && rectHit(p, {x:c.x-8,y:c.y-8,w:16,h:16})) {
+      c.taken = true;
+      game.score += 10;
+    }
+  });
+
+  // Stars
+  game.stars.forEach(s => {
+    s.t += 0.05;
+    if (!s.taken && rectHit(p, {x:s.x-12,y:s.y-12,w:24,h:24})) {
+      s.taken = true;
+      game.score += 25;
+    }
+  });
+
+  // Math gates: trigger when player gets close.
+  // IMPORTANT: resolveX has already pushed the player back so they can't
+  // overlap the gate's collision box. We use an enlarged TRIGGER zone so the
+  // panel opens as soon as the kid bumps into the gate.
+  game.gates.forEach(g => {
+    if (g.cleared) return;
+    const trigger = { x: g.x - 24, y: g.y, w: g.w + 48, h: g.h };
+    if (rectHit(p, trigger)) {
+      game.currentGate = g;
+      game.gateInput = '';
+      state = STATE.GATE;
+      const dom = document.getElementById('gateProblem');
+      dom.textContent = g.problem.display;
+      const fb = document.getElementById('gateFeedback');
+      if (fb) { fb.textContent = ''; fb.style.color = ''; }
+      show('gatePanel');
+    }
+  });
+
+  // Rocket = win
+  if (rectHit(p, game.rocket)) {
+    game.score += 500;
+    state = STATE.WIN;
+    document.getElementById('winScore').textContent = game.score;
+    document.getElementById('winGates').textContent = game.gatesCleared;
+    show('winPanel');
+    saveBest();
+  }
+}
+
+function resolveX() {
+  const p = game.player;
+  game.platforms.forEach(pl => {
+    if (rectHit(p, pl)) {
+      if (p.vx > 0) p.x = pl.x - p.w;
+      else if (p.vx < 0) p.x = pl.x + pl.w;
+    }
+  });
+  // Block on uncleared gates
+  game.gates.forEach(g => {
+    if (!g.cleared && rectHit(p, g)) {
+      if (p.vx > 0) p.x = g.x - p.w;
+      else if (p.vx < 0) p.x = g.x + g.w;
+    }
+  });
+}
+function resolveY() {
+  const p = game.player;
+  p.onGround = false;
+  game.platforms.forEach(pl => {
+    if (rectHit(p, pl)) {
+      if (p.vy > 0) { p.y = pl.y - p.h; p.vy = 0; p.onGround = true; }
+      else if (p.vy < 0) { p.y = pl.y + pl.h; p.vy = 0; }
+    }
+  });
+}
+function rectHit(a, b) {
+  return a.x < b.x + b.w && a.x + a.w > b.x &&
+         a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// ---------------- Render ----------------
+function render() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Sky gradient (theme-controlled)
+  const tp = THEMES[theme] || THEMES.space;
+  const grd = ctx.createLinearGradient(0, 0, 0, H);
+  grd.addColorStop(0, tp.skyTop);
+  grd.addColorStop(0.7, tp.skyMid);
+  grd.addColorStop(1, tp.skyBot);
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W, H);
+
+  // Before the player has clicked START, world isn't built yet — bail out
+  if (state === STATE.START || !game.player) return;
+
+  // Background stars (parallax)
+  game.bgStars.forEach(s => {
+    const sx = (s.x - game.cameraX * s.speed * 0.3) % (W * 3);
+    const x = sx < 0 ? sx + W*3 : sx;
+    ctx.fillStyle = `rgba(255,255,255,${0.3 + s.r*0.3})`;
+    ctx.beginPath(); ctx.arc(x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+  });
+
+  // Distant planet (theme-coloured)
+  ctx.save();
+  const planetX = 200 - game.cameraX * 0.15;
+  ctx.fillStyle = tp.planet1;
+  ctx.globalAlpha = 0.55;
+  ctx.beginPath(); ctx.arc(planetX, 100, 60, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = tp.planet2;
+  ctx.beginPath(); ctx.arc(planetX - 18, 88, 45, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // World transform
+  ctx.save();
+  ctx.translate(-game.cameraX, 0);
+
+  // Platforms (theme-coloured)
+  game.platforms.forEach(pl => {
+    if (pl.x + pl.w < game.cameraX || pl.x > game.cameraX + W) return;
+    if (pl.kind === 'ground') {
+      ctx.fillStyle = tp.groundDark;
+      ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
+      ctx.fillStyle = tp.groundLight;
+      ctx.fillRect(pl.x, pl.y, pl.w, 6);
+      // surface details
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      for (let cx = pl.x + 20; cx < pl.x + pl.w - 10; cx += 60) {
+        ctx.beginPath(); ctx.arc(cx, pl.y + 25, 4, 0, Math.PI*2); ctx.fill();
+      }
+    } else {
+      ctx.fillStyle = tp.platformDark;
+      ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
+      ctx.fillStyle = tp.platformLight;
+      ctx.fillRect(pl.x, pl.y, pl.w, 3);
+    }
+  });
+
+  // Coins
+  game.coins.forEach(c => {
+    if (c.taken) return;
+    ctx.save();
+    ctx.fillStyle = '#ffd95b';
+    ctx.beginPath(); ctx.arc(c.x, c.y, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff5ad';
+    ctx.beginPath(); ctx.arc(c.x-1.5, c.y-1.5, 2, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  // Stars
+  game.stars.forEach(s => {
+    if (s.taken) return;
+    drawStar(s.x, s.y, 12 + Math.sin(s.t)*1.5, '#ffd95b');
+  });
+
+  // Gates — collision spans full height; visual extends upward so the player
+  // can SEE the gate cannot be jumped over.
+  game.gates.forEach(g => {
+    if (g.cleared) return;
+    const vy = g.visY, vh = g.visH;
+    // Faint upward energy column (top of canvas down to gate body).
+    const upGrad = ctx.createLinearGradient(0, 0, 0, vy);
+    upGrad.addColorStop(0, 'rgba(78,226,236,0.0)');
+    upGrad.addColorStop(1, 'rgba(78,226,236,0.35)');
+    ctx.fillStyle = upGrad;
+    ctx.fillRect(g.x, 0, g.w, vy);
+    // Faint downward column (gate body to bottom of canvas).
+    const dnGrad = ctx.createLinearGradient(0, vy + vh, 0, H);
+    dnGrad.addColorStop(0, 'rgba(78,226,236,0.35)');
+    dnGrad.addColorStop(1, 'rgba(78,226,236,0.0)');
+    ctx.fillStyle = dnGrad;
+    ctx.fillRect(g.x, vy + vh, g.w, H - (vy + vh));
+    // Main beam (the "active" energy section)
+    const grad = ctx.createLinearGradient(g.x, vy, g.x + g.w, vy);
+    grad.addColorStop(0, 'rgba(180,108,255,0.0)');
+    grad.addColorStop(0.5, 'rgba(78,226,236,0.85)');
+    grad.addColorStop(1, 'rgba(180,108,255,0.0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(g.x, vy, g.w, vh);
+    // Pillars (full canvas height — visually communicates "wall")
+    ctx.fillStyle = '#b46cff';
+    ctx.fillRect(g.x - 8, 0, 10, H);
+    ctx.fillRect(g.x + g.w - 2, 0, 10, H);
+    // Glow caps at the gate body
+    ctx.fillStyle = '#4ee2ec';
+    ctx.beginPath(); ctx.arc(g.x - 3, vy - 10, 6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(g.x + g.w + 3, vy - 10, 6, 0, Math.PI*2); ctx.fill();
+    // Tiny moving "pulse" dots to suggest active force-field
+    const t = (performance.now() / 300) % 1;
+    for (let k = 0; k < 6; k++) {
+      const py = ((t + k / 6) % 1) * H;
+      ctx.fillStyle = 'rgba(78,226,236,0.65)';
+      ctx.beginPath(); ctx.arc(g.x + g.w/2, py, 2.5, 0, Math.PI*2); ctx.fill();
+    }
+  });
+  game.gates.filter(g => g.cleared).forEach(g => {
+    // Cleared gates leave a faint marker
+    ctx.fillStyle = 'rgba(78,226,236,0.12)';
+    ctx.fillRect(g.x - 4, g.visY - 4, g.w + 8, g.visH + 8);
+  });
+
+  // Rocket
+  const r = game.rocket;
+  ctx.fillStyle = '#f0f4ff';
+  ctx.beginPath();
+  ctx.moveTo(r.x + r.w/2, r.y);
+  ctx.lineTo(r.x + r.w, r.y + 40);
+  ctx.lineTo(r.x + r.w, r.y + r.h);
+  ctx.lineTo(r.x, r.y + r.h);
+  ctx.lineTo(r.x, r.y + 40);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#ff5b6e';
+  ctx.fillRect(r.x - 8, r.y + r.h - 30, 8, 30);
+  ctx.fillRect(r.x + r.w, r.y + r.h - 30, 8, 30);
+  ctx.fillStyle = '#4ee2ec';
+  ctx.beginPath(); ctx.arc(r.x + r.w/2, r.y + 50, 10, 0, Math.PI*2); ctx.fill();
+  // exhaust
+  ctx.fillStyle = '#ffd95b';
+  ctx.beginPath();
+  ctx.moveTo(r.x + 10, r.y + r.h);
+  ctx.lineTo(r.x + r.w/2, r.y + r.h + 28 + Math.random()*6);
+  ctx.lineTo(r.x + r.w - 10, r.y + r.h);
+  ctx.closePath();
+  ctx.fill();
+
+  // Player
+  drawPlayer(game.player);
+
+  ctx.restore();
+
+  // HUD
+  drawHUD();
+}
+
+function drawPlayer(p) {
+  // body
+  ctx.fillStyle = '#f0f4ff';
+  ctx.fillRect(p.x, p.y, p.w, p.h);
+  // helmet visor
+  ctx.fillStyle = '#4ee2ec';
+  ctx.fillRect(p.x + 4, p.y + 6, p.w - 8, 12);
+  // backpack
+  ctx.fillStyle = '#b46cff';
+  if (p.facing > 0) ctx.fillRect(p.x - 4, p.y + 14, 6, 20);
+  else ctx.fillRect(p.x + p.w - 2, p.y + 14, 6, 20);
+  // legs
+  ctx.fillStyle = '#1a1f4e';
+  ctx.fillRect(p.x + 4, p.y + p.h - 6, 8, 6);
+  ctx.fillRect(p.x + p.w - 12, p.y + p.h - 6, 8, 6);
+}
+
+function drawStar(cx, cy, r, color) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const angle = (Math.PI / 5) * i - Math.PI/2;
+    const radius = i % 2 === 0 ? r : r/2.4;
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawHUD() {
+  // Score
+  ctx.fillStyle = 'rgba(10,14,39,0.6)';
+  ctx.fillRect(12, 12, 220, 64);
+  ctx.fillStyle = '#4ee2ec';
+  ctx.font = 'bold 18px Segoe UI, sans-serif';
+  ctx.fillText('Score: ' + game.score, 24, 36);
+  ctx.fillStyle = '#ffd95b';
+  ctx.fillText('Gates: ' + game.gatesCleared + '/' + game.gates.length, 24, 60);
+
+  // Hearts
+  for (let i = 0; i < game.hearts; i++) {
+    drawHeart(W - 30 - i * 32, 28, 12, '#ff5b6e');
+  }
+
+  // Difficulty + theme badge
+  ctx.fillStyle = 'rgba(180,108,255,0.6)';
+  ctx.fillRect(W/2 - 90, 12, 180, 28);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px Segoe UI, sans-serif';
+  ctx.textAlign = 'center';
+  const themeName = (theme === 'space' ? 'SPACE' : theme === 'jungle' ? 'JUNGLE' : 'ICE');
+  ctx.fillText(DIFF[difficulty].name + ' · ' + themeName, W/2, 31);
+  ctx.textAlign = 'left';
+
+  // Live gate input
+  if (state === STATE.GATE) {
+    document.getElementById('gateAnswer').textContent = game.gateInput || '_';
+  }
+}
+
+function drawHeart(cx, cy, size, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + size/3);
+  ctx.bezierCurveTo(cx, cy, cx - size, cy, cx - size, cy + size/3);
+  ctx.bezierCurveTo(cx - size, cy + size/1.4, cx, cy + size, cx, cy + size*1.2);
+  ctx.bezierCurveTo(cx, cy + size, cx + size, cy + size/1.4, cx + size, cy + size/3);
+  ctx.bezierCurveTo(cx + size, cy, cx, cy, cx, cy + size/3);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ---------------- UI ----------------
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+
+document.querySelectorAll('#diffButtons .btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#diffButtons .btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    difficulty = b.dataset.diff;
+  });
+});
+document.querySelectorAll('#themeButtons .btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#themeButtons .btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    theme = b.dataset.theme;
+  });
+});
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('winRestart').addEventListener('click', () => { hide('winPanel'); startGame(); });
+document.getElementById('loseRestart').addEventListener('click', () => { hide('losePanel'); startGame(); });
+document.getElementById('homeBtn').addEventListener('click', backToHome);
+document.getElementById('pauseHome').addEventListener('click', backToHome);
+document.getElementById('winBackHome').addEventListener('click', backToHome);
+document.getElementById('loseBackHome').addEventListener('click', backToHome);
+
+function startGame() {
+  hide('startPanel');
+  hide('winPanel'); hide('losePanel'); hide('pausePanel');
+  document.getElementById('homeBtn').classList.remove('hidden');
+  buildLevel();
+  state = STATE.PLAYING;
+}
+
+function backToHome() {
+  hide('winPanel'); hide('losePanel'); hide('pausePanel');
+  document.getElementById('homeBtn').classList.add('hidden');
+  refreshBestText();
+  show('startPanel');
+  state = STATE.START;
+  for (const k in keys) keys[k] = false;
+}
+
+function saveBest() {
+  try {
+    const key = 'mathquest.best.' + difficulty;
+    const cur = parseInt(localStorage.getItem(key) || '0', 10);
+    if (game.score > cur) localStorage.setItem(key, String(game.score));
+  } catch(e) {}
+  refreshBestText();
+}
+function refreshBestText() {
+  try {
+    const e = document.getElementById('bestScore');
+    const easy = localStorage.getItem('mathquest.best.easy') || '0';
+    const med  = localStorage.getItem('mathquest.best.medium') || '0';
+    const hard = localStorage.getItem('mathquest.best.hard') || '0';
+    e.textContent = 'Best - Easy: ' + easy + '  Medium: ' + med + '  Hard: ' + hard;
+  } catch(e) {}
+}
+refreshBestText();
+
+function loop() {
+  requestAnimationFrame(loop);
+  try { update(); } catch(e) { console.error('update', e); }
+  try { render(); } catch(e) { console.error('render', e); }
+}
+loop();
+</script>
+</body>
+</html>
